@@ -87,6 +87,15 @@
 └── .gitignore
 ```
 
+## 安装
+
+1. 打开 [Releases](https://github.com/xyl-kong/lingye/releases) 页面，下载最新的 `lingye-v0.15-...-release-*.apk`。
+2. 在平板的“设置 → 应用 → 特殊应用权限 → 安装未知应用”中，允许浏览器或文件管理器安装 APK。
+3. 打开下载的 APK 完成安装。首次启动会创建本地工作区，不需要账号或网络。
+4. 可选校验：`SHA-256` 应与 Release 说明一致。当前版本为 `E47897F7826A0E5C5977F2790856C8B67D083169FA03BBF09797AA0C232F8CD9`。
+
+> 开发版可能与旧版本数据不兼容：升级前请先在“设置 → 储存/备份”导出备份；不要把它作为唯一资料存储。
+
 ## 构建
 
 需要 **JDK 21**、**Android SDK 36** 与 **Gradle 8.13**。仓库未包含 Gradle Wrapper；`local.properties` 与调试签名不入库。
