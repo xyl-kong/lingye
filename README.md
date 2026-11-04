@@ -9,6 +9,8 @@
 </p>
 
 > 当前为 **0.15 开发版**，页面格式 **25**。开发版不应作为唯一资料存储，升级/卸载前请先导出备份。
+>
+> **下载**：[最新 Release](https://github.com/xyl-kong/lingye/releases/latest) · [直接下载 batch34 APK](https://github.com/xyl-kong/lingye/releases/download/v0.15-batch34/lingye-v0.15-architecture-batch34-release-20261104.apk)
 
 ## 项目状态
 
@@ -89,7 +91,7 @@
 
 ## 安装
 
-1. 打开 [Releases](https://github.com/xyl-kong/lingye/releases) 页面，下载最新的 `lingye-v0.15-...-release-*.apk`。
+1. 打开 [Releases](https://github.com/xyl-kong/lingye/releases/latest) 页面，下载最新的 `lingye-v0.15-...-release-*.apk`（当前为 [v0.15-batch34](https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch34)）。
 2. 在平板的“设置 → 应用 → 特殊应用权限 → 安装未知应用”中，允许浏览器或文件管理器安装 APK。
 3. 打开下载的 APK 完成安装。首次启动会创建本地工作区，不需要账号或网络。
 4. 可选校验：`SHA-256` 应与 Release 说明一致。当前版本为 `E47897F7826A0E5C5977F2790856C8B67D083169FA03BBF09797AA0C232F8CD9`。
@@ -118,7 +120,9 @@ Release 启用 R8（`app/proguard-rules.pro`）。调试签名可用项目根目
 
 ## 当前发布
 
+- Release 页面：https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch34
 - 文件：`tablet-workspace/releases/lingye-v0.15-architecture-batch34-release-20261104.apk`
+- 直接下载：https://github.com/xyl-kong/lingye/releases/download/v0.15-batch34/lingye-v0.15-architecture-batch34-release-20261104.apk
 - 大小：3,440,431 字节
 - SHA-256：`E47897F7826A0E5C5977F2790856C8B67D083169FA03BBF09797AA0C232F8CD9`
 
