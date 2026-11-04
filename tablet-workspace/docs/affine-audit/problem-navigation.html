@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>灵页 · 问题频率与根源导览</title>
+<style>
+  :root{
+    --bg:#f6f5f2; --panel:#fff; --ink:#1d1d1f; --muted:#6b6b70;
+    --line:#e6e3dc; --soft:#f1efe9;
+    --red:#d95d4f; --orange:#d99a3d; --blue:#4b7bec; --green:#3f9d78; --violet:#8a6cd1;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;line-height:1.55}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 72px}
+  header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:28px}
+  h1{font-size:30px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:14px;max-width:720px}
+  .stamp{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:var(--panel)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:24px 0 34px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+  .stat b{display:block;font-size:28px;letter-spacing:-.03em}
+  .stat span{font-size:12px;color:var(--muted)}
+  section{margin:38px 0}
+  h2{font-size:20px;margin:0 0 6px;letter-spacing:-.01em}
+  .lead{color:var(--muted);font-size:13px;margin:0 0 18px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 22px 18px}
+  .bars{display:flex;flex-direction:column;gap:12px}
+  .bar-row{display:grid;grid-template-columns:210px 1fr 52px;gap:14px;align-items:center;font-size:13px}
+  .bar-track{height:14px;background:var(--soft);border-radius:999px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:999px}
+  .bar-val{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--muted)}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:1px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .card h3{font-size:15px;margin:0 0 8px}
+  .card p{font-size:13px;color:var(--muted);margin:0}
+  .card ul{margin:8px 0 0 18px;padding:0;font-size:13px;color:var(--muted)}
+  .card li{margin:3px 0}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel)}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);background:var(--soft)}
+  tr:last-child td{border-bottom:none}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line);background:var(--soft);color:var(--muted)}
+  .pill.high{background:#fbeae7;border-color:#f3cfc9;color:#a83b2f}
+  .pill.mid{background:#fbf1e2;border-color:#efdcc1;color:#8a5a19}
+  .pill.low{background:#eaf4ef;border-color:#cfe5da;color:#2f6e56}
+  .timeline{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+  .day{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:150px}
+  .day b{font-size:12px;display:block;margin-bottom:8px}
+  .chip{display:block;font-size:11px;line-height:1.35;background:var(--soft);border-radius:8px;padding:5px 7px;margin-bottom:5px;color:var(--ink)}
+  .chip.ui{border-left:3px solid var(--blue)}
+  .chip.state{border-left:3px solid var(--red)}
+  .chip.data{border-left:3px solid var(--green)}
+  .chip.build{border-left:3px solid var(--orange)}
+  .note{font-size:12px;color:var(--muted);margin-top:12px}
+  .rules{counter-reset:rule;display:grid;gap:10px}
+  .rule{display:grid;grid-template-columns:34px 1fr;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .rule:before{counter-increment:rule;content:counter(rule);display:flex;align-items:center;justify-content:center;
+    width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px}
+  .rule b{font-size:14px}
+  .rule p{margin:3px 0 0;font-size:13px;color:var(--muted)}
+  footer{margin-top:44px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:18px}
+  a{color:var(--blue);text-decoration:none}
+  @media (max-width:860px){.timeline{grid-template-columns:repeat(2,1fr)}.bar-row{grid-template-columns:150px 1fr 40px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>灵页 · 问题频率与根源导览</h1>
+    <p class="sub">同一类界面/交互问题被反复修改的次数、可追溯轮次与根源。数据来自 <code>docs/affine-audit</code> 的批次记录、设置专项、工具栏核对与工作清单；只统计有文档记录的轮次，是下限而非全部微调。</p>
+  </div>
+  <div class="stamp">2026-10-28 → 2026-11-04</div>
+</header>
+
+<div class="stats">
+  <div class="stat"><b>34</b><span>架构批次（batch1–34）</span></div>
+  <div class="stat"><b>11</b><span>设置弹窗返工轮次</span></div>
+  <div class="stat"><b>10+</b><span>画布底栏返工轮次</span></div>
+  <div class="stat"><b>42</b><span>工作清单中的用户反馈记录</span></div>
+  <div class="stat"><b>434</b><span>JVM 测试（0 失败）</span></div>
+</div>
+
+<section>
+  <h2>0. 早期设计稿与方向反转</h2>
+  <p class="lead">在进入“返工统计”前先看设计源头：v0.8 的悬浮圆角/柔光方向在 10-30 被 AFFiNE 白色平直方案整体替换，这是后续壳层、侧栏、输入框、工具条多次重做的起点。设计稿与对照记录都在仓库内，可直接点开。</p>
+  <div class="grid">
+    <div class="card"><h3>v0.8 视觉升级（10-29）</h3><p>紫蓝主色、薄荷绿保存、珊瑚红删除；侧栏与编辑区为悬浮圆角面板；浅色柔光渐变、22 秒漂移；160–260ms 过渡；圆点网格与端口语言。</p><ul><li><a href="../design/visual-refresh-v0.8.md">visual-refresh-v0.8.md</a></li><li>结果：网格/端口/动效保留，悬浮面板与柔光背景被平直布局取代</li></ul></div>
+    <div class="card"><h3>白板与卡片设计草案（10-29）</h3><p>端口、连线光点、框选组合、卡片模板、可靠性；后续 Frame/卡片/连线的实现输入。</p><ul><li><a href="../design/whiteboard-cards-design.md">whiteboard-cards-design.md</a></li><li><a href="../design/roadmap-v0.8.md">roadmap-v0.8.md</a></li></ul></div>
+    <div class="card"><h3>白色平直改版（10-30）</h3><p>白色平直工作区、较窄浅色侧栏、蓝色选中；页面/收藏/回收站纵向；文档块去边框；白板工具条限宽；侧栏圆角与轻阴影。</p><ul><li><a href="2026-10-30-visual-preview.md">2026-10-30-visual-preview.md</a></li><li>方向反转：悬浮圆角 + 柔光 → 贴边窄侧栏 + 平直白色</li></ul></div>
+    <div class="card"><h3>AFFiNE 实机对照（10-30）</h3><p>用 Web Demo 与 0.15 逐项对照：英文侧栏标签截断、输入框仍像表单、底栏过宽、设置结构差异；随后补审计质量复核。</p><ul><li><a href="2026-10-30-live-comparison.md">live-comparison</a> · <a href="2026-10-30-followup-review.md">followup-review</a></li><li>教训：截图近似 ≠ 同视口实测</li></ul></div>
+    <div class="card"><h3>图标三方向稿（10-31）</h3><p>纸片 + 单点强调 / 彩色贴纸 / 墨线 + 单点填色，按 34dp 与放大稿预览；用户选定方向 A 后重绘 6 个 VectorDrawable。</p><ul><li><a href="icon-directions-2026-10-31.html">icon-directions-2026-10-31.html</a></li><li>结果：PNG/线型/旧素材混用结束</li></ul></div>
+    <div class="card"><h3>设置截图与多轮对照（10-31）</h3><p>设置从整页 → 弹窗 → 官方左灰右白 → 视觉重做；截图对照与 11 轮记录在设置专项中。</p><ul><li><a href="SETTINGS_IMPROVEMENTS.md">SETTINGS_IMPROVEMENTS.md</a></li><li><a href="UI_DESIGN_ITERATIONS.md">UI_DESIGN_ITERATIONS.md</a></li></ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>1. 问题类型频率</h2>
+  <p class="lead">按“同一类问题被重新处理”的轮次排序。颜色表示对用户可见度：红=直接可见缺陷，橙=布局/裁切，蓝=视觉返工，绿=数据/构建风险。</p>
+  <div class="panel">
+    <div class="bars">
+      <div class="bar-row"><span>设置弹窗视觉/结构</span><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--blue)"></div></div><span class="bar-val">11</span></div>
+      <div class="bar-row"><span>画布底栏/参数条</span><div class="bar-track"><div class="bar-fill" style="width:91%;background:var(--blue)"></div></div><span class="bar-val">10</span></div>
+      <div class="bar-row"><span>文本/对象工具条</span><div class="bar-track"><div class="bar-fill" style="width:64%;background:var(--blue)"></div></div><span class="bar-val">7</span></div>
+      <div class="bar-row"><span>窄屏/字体/分屏适配</span><div class="bar-track"><div class="bar-fill" style="width:55%;background:var(--orange)"></div></div><span class="bar-val">6</span></div>
+      <div class="bar-row"><span>交互方式（编辑退出/链接/互斥）</span><div class="bar-track"><div class="bar-fill" style="width:55%;background:var(--red)"></div></div><span class="bar-val">6</span></div>
+      <div class="bar-row"><span>数据格式/备份/元数据</span><div class="bar-track"><div class="bar-fill" style="width:55%;background:var(--green)"></div></div><span class="bar-val">6</span></div>
+      <div class="bar-row"><span>图标/插画/帮助图标</span><div class="bar-track"><div class="bar-fill" style="width:45%;background:var(--blue)"></div></div><span class="bar-val">5</span></div>
+      <div class="bar-row"><span>Compose 状态/重组</span><div class="bar-track"><div class="bar-fill" style="width:45%;background:var(--red)"></div></div><span class="bar-val">5</span></div>
+      <div class="bar-row"><span>构建/验证工具链</span><div class="bar-track"><div class="bar-fill" style="width:45%;background:var(--orange)"></div></div><span class="bar-val">5</span></div>
+      <div class="bar-row"><span>菜单组件迁移</span><div class="bar-track"><div class="bar-fill" style="width:36%;background:var(--blue)"></div></div><span class="bar-val">4</span></div>
+      <div class="bar-row"><span>取色器/颜色入口</span><div class="bar-track"><div class="bar-fill" style="width:36%;background:var(--blue)"></div></div><span class="bar-val">4</span></div>
+      <div class="bar-row"><span>性能缓存/索引</span><div class="bar-track"><div class="bar-fill" style="width:36%;background:var(--green)"></div></div><span class="bar-val">4</span></div>
+      <div class="bar-row"><span>模板画廊</span><div class="bar-track"><div class="bar-fill" style="width:27%;background:var(--blue)"></div></div><span class="bar-val">3</span></div>
+      <div class="bar-row"><span>早期视觉方向反转</span><div class="bar-track"><div class="bar-fill" style="width:18%;background:var(--blue)"></div></div><span class="bar-val">2</span></div>
+      <div class="bar-row"><span>文件夹/列表可见性/滚动</span><div class="bar-track"><div class="bar-fill" style="width:27%;background:var(--red)"></div></div><span class="bar-val">3</span></div>
+    </div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--red)"></i>直接可见缺陷/状态错误</span>
+      <span><i class="dot" style="background:var(--orange)"></i>布局/裁切/工具链</span>
+      <span><i class="dot" style="background:var(--blue)"></i>视觉返工/对齐官方</span>
+      <span><i class="dot" style="background:var(--green)"></i>数据/性能/兼容</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>2. 重复修改榜</h2>
+  <p class="lead">同一处被改多次的典型条目，以及每次修改的触发点。频率越高，说明该区域越缺“一次做对”的前置约束。</p>
+  <table>
+    <thead><tr><th>区域</th><th class="num">轮次</th><th>反复点</th><th>根源归类</th></tr></thead>
+    <tbody>
+      <tr><td>早期视觉方向</td><td class="num">2</td><td>v0.8 紫蓝/悬浮圆角/柔光 → 10-30 白色平直/贴边窄侧栏；壳层、输入框、底栏随之重做</td><td><span class="pill high">设计基准未锁定</span></td></tr>
+      <tr><td>设置弹窗</td><td class="num">11</td><td>整页→弹窗→官方布局→视觉重做→紧凑→窄屏→动画→深色；主题三段→三档、语言分段→下拉、取色器三次重做</td><td><span class="pill high">基准漂移</span> <span class="pill mid">组件缺失</span></td></tr>
+      <tr><td>画布底栏</td><td class="num">10</td><td>结构重排 3 次、功能去重、44×44dp、选中态互斥、参数条宽度、插画图标三方向稿</td><td><span class="pill high">基准漂移</span> <span class="pill mid">功能膨胀</span></td></tr>
+      <tr><td>文本/对象工具条</td><td class="num">7</td><td>块级/选区两套状态、Scale/Size、内联编辑退出方式两次、相邻“＋”从文本扩展到卡片</td><td><span class="pill high">状态建模</span> <span class="pill mid">交互映射</span></td></tr>
+      <tr><td>窄屏/字体/分屏</td><td class="num">6</td><td>参数条裁切、首页头部折行、块类型条裁切、设置单栏、200% 字体、真实分屏</td><td><span class="pill mid">响应式未前置</span></td></tr>
+      <tr><td>交互方式</td><td class="num">6</td><td>“完成”按钮先加后删、链接拖动 vs 点按、菜单选中态互斥、Export 子菜单定位</td><td><span class="pill high">桌面交互照搬</span></td></tr>
+      <tr><td>数据/备份</td><td class="num">6</td><td>格式 23/24/25、Journal/模板元数据、metadata.dat、图片孤儿清理、备份限制</td><td><span class="pill high">格式演进无一次性设计</span></td></tr>
+      <tr><td>图标/视觉资产</td><td class="num">5</td><td>线型图标统一、PNG/Vector 混用、三方向插画稿、启动图标、帮助“?”居中</td><td><span class="pill mid">资产规范缺失</span></td></tr>
+      <tr><td>Compose 状态</td><td class="num">5</td><td>相邻“＋”不跟随、撤销后编辑器残留、文件夹“看不见”、工具条状态、列表 key</td><td><span class="pill high">可变对象 + 强跳过</span></td></tr>
+      <tr><td>构建/验证</td><td class="num">5</td><td>R8 VerifyError、构建副本残留旧类、中文路径、Gboard 误触、坐标点按偏移</td><td><span class="pill mid">流程/环境坑</span></td></tr>
+      <tr><td>菜单组件</td><td class="num">4</td><td>手写 DropdownMenuItem→图层组件→MenuRow→副标题全量迁移；禁用/危险/勾选色统一</td><td><span class="pill low">组件化滞后</span></td></tr>
+      <tr><td>取色器/颜色</td><td class="num">4</td><td>胶囊→色圈+自定义色卡→白卡色点→HSV/华为白板；墨黑/深灰标签可读性返工</td><td><span class="pill mid">对比度未验收</span></td></tr>
+      <tr><td>性能</td><td class="num">4</td><td>文本排版、连线采样、命中索引、列表筛选；始终没有同条件基线</td><td><span class="pill mid">无性能门禁</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>3. 时间线：问题集中在哪些阶段</h2>
+  <p class="lead">UI 返工集中在 10-30 至 10-31（对照官方与设置多次重做）；状态/数据问题贯穿全程；构建坑集中在切换源码结构与发布阶段。</p>
+  <div class="timeline">
+    <div class="day"><b>10-28</b><span class="chip ui">初版表单式 UI/紫色主按钮</span><span class="chip build">调试签名/构建路径</span></div>
+    <div class="day"><b>10-29</b><span class="chip ui">v0.8 视觉升级：悬浮圆角/柔光</span><span class="chip ui">白板卡片设计草案</span><span class="chip data">页面格式早期迁移</span></div>
+    <div class="day"><b>10-30</b><span class="chip ui">白色平直改版（方向反转）</span><span class="chip ui">AFFiNE 实机对照/审计复核</span><span class="chip ui">底栏结构/参数条</span><span class="chip state">工具选中态</span></div>
+    <div class="day"><b>10-31</b><span class="chip ui">设置 9 轮返工</span><span class="chip ui">底栏去重/图标三方向</span><span class="chip ui">深色/分段动画</span></div>
+    <div class="day"><b>11-01</b><span class="chip ui">文本框官方工具条</span><span class="chip ui">文档信息/双向链接</span><span class="chip state">内联编辑器残留</span></div>
+    <div class="day"><b>11-02</b><span class="chip ui">页面菜单/属性侧栏</span><span class="chip ui">取色器/连线/参考线</span><span class="chip data">图片与元数据</span></div>
+    <div class="day"><b>11-03</b><span class="chip ui">模板画廊/自由缩放/边中点</span><span class="chip data">Journal/模板</span><span class="chip build">R8/导出子菜单</span></div>
+    <div class="day"><b>11-04</b><span class="chip ui">菜单全量迁移/帮助“?”</span><span class="chip state">相邻“＋”修复</span><span class="chip build">构建副本旧类</span><span class="chip data">架构 batch1–34</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>4. 根源：为什么同一类问题会反复出现</h2>
+  <div class="grid">
+    <div class="card"><h3>① 设计基准漂移</h3><p>先按截图近似实现，后来核对 BlockSuite/AFFiNE 源码才发现结构、尺寸、状态不同，只能重排。最早还有一次整体方向反转：v0.8 的紫蓝悬浮圆角/柔光 → 10-30 的白色平直/贴边窄侧栏，壳层、输入框、底栏全部跟着改。</p><ul><li>对策：开工前锁定官方 commit/截图与 token 表</li><li>对策：先定视觉方向，再大量实现；变更需记录</li></ul></div>
+    <div class="card"><h3>② 组件化滞后</h3><p>菜单、工具条、设置行、颜色入口先各处手写，视觉/行为不一致后再抽组件，迁移成本高。</p><ul><li>对策：同类 UI 出现第 2 次就抽组件</li><li>对策：MenuRow / SettingsRow / ParameterBar 先行</li></ul></div>
+    <div class="card"><h3>③ Compose 状态建模错误</h3><p>页面对象原地修改、可变引用被强跳过，导致“＋”不跟随、编辑器残留、列表不刷新；表面像 UI bug，实际是状态观察问题。</p><ul><li>对策：UI 状态用不可变值类型/快照</li><li>对策：显式 geometryRevision / key，禁止依赖引用变化</li></ul></div>
+    <div class="card"><h3>④ 响应式未作为验收维度</h3><p>宽屏通过就发布，640dp、360dp、200% 字体、分屏才暴露折行和裁切，随后补布局。</p><ul><li>对策：定义 360/540/640/1280dp + 200% 字体矩阵</li><li>对策：每个界面至少在 2 个宽度截图验收</li></ul></div>
+    <div class="card"><h3>⑤ 桌面交互直接照搬</h3><p>官方依赖悬停、右键、滑出菜单；平板触控没有这些路径，只能改成常驻工具条/长按/更多菜单，交互反复调整。</p><ul><li>对策：先做“桌面→平板”交互映射表</li><li>对策：把不可用入口隐藏或禁用，不伪装</li></ul></div>
+    <div class="card"><h3>⑥ 数据格式演进缺少一次性设计</h3><p>格式 23/24/25 逐项追加，Journal/模板元数据起初不在备份内，后来补 metadata.dat，迁移与兼容测试反复增加。</p><ul><li>对策：格式变更走版本化 ADR + round-trip 测试</li><li>对策：元数据从第一天就纳入备份</li></ul></div>
+    <div class="card"><h3>⑦ 构建与验证流程不稳</h3><p>构建副本用 `/E` 同步留下旧根包类；中文路径、Gboard 覆盖、硬编码坐标导致验证结果失真。</p><ul><li>对策：源码副本必须 `/MIR`；搬包后 clean build</li><li>对策：点击用 uiautomator bounds，不硬编码坐标</li></ul></div>
+    <div class="card"><h3>⑧ 没有视觉/性能回归门禁</h3><p>UI 靠人工截图对比，性能靠临时采样；没有基线就无法判断“改好了”还是“看起来差不多”。</p><ul><li>对策：关键界面建立截图基线（3 个宽度）</li><li>对策：性能改动必须同条件前后采样</li></ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>5. 复发风险最高的 8 个点</h2>
+  <p class="lead">按“曾经反复 + 用户直接可见 + 容易再次改坏”排序。建议每次涉及这些区域时逐项自检。</p>
+  <table>
+    <thead><tr><th>风险点</th><th>典型症状</th><th>自检问题</th><th>等级</th></tr></thead>
+    <tbody>
+      <tr><td>设置弹窗布局/控件</td><td>宽窄屏错位、主题/语言控件不一致</td><td>是否同时看了 1280dp、640dp、360dp 与深色？</td><td><span class="pill high">高</span></td></tr>
+      <tr><td>底栏/参数条</td><td>重复入口、选中态乱跳、尾部空白、裁切</td><td>是否只保留一个入口？窄屏能否滑到关闭？</td><td><span class="pill high">高</span></td></tr>
+      <tr><td>相邻“＋”/对象工具条</td><td>移动后不跟随、残留、遮挡对象</td><td>几何变化是否用值类型驱动？拖动时是否隐藏？</td><td><span class="pill high">高</span></td></tr>
+      <tr><td>内联编辑退出</td><td>按钮突兀、Esc 被 IME 吞、焦点残留</td><td>外部点击/Esc/Ctrl+Enter 是否都验证？</td><td><span class="pill mid">中高</span></td></tr>
+      <tr><td>菜单组件</td><td>图标尺寸/禁用色/勾选态不一致</td><td>是否使用 MenuRow？是否处理禁用优先于危险？</td><td><span class="pill mid">中</span></td></tr>
+      <tr><td>取色器/深色对比度</td><td>墨黑/深灰标签看不清、色点太密</td><td>最暗与最亮色点上是否都放大看过？</td><td><span class="pill mid">中</span></td></tr>
+      <tr><td>页面列表/文件夹</td><td>“看不到新文件夹”、滚动位置误解</td><td>是否先确认 LazyListState 偏移再判为渲染 bug？</td><td><span class="pill mid">中</span></td></tr>
+      <tr><td>构建副本/发布</td><td>旧类残留、R8 崩溃、APK 哈希与文档不一致</td><td>是否 `/MIR` + clean build + 安装后核对哈希？</td><td><span class="pill high">高</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>6. 可执行的规避规则</h2>
+  <div class="rules">
+    <div class="rule"><div><b>基准先行</b><p>每个界面先写清“对照哪个官方 commit/截图、哪些尺寸、哪些状态”，再写代码；基准变化单独记录，不边写边换参考。</p></div></div>
+    <div class="rule"><div><b>第二次就抽象</b><p>同类菜单/设置行/参数条/颜色入口出现第二次时立即抽组件，禁止复制第三份。</p></div></div>
+    <div class="rule"><div><b>状态不可变化</b><p>UI 只读不可变模型；几何/内容用值类型和 revision 驱动；不使用可变对象引用作为重组依据。</p></div></div>
+    <div class="rule"><div><b>响应式是完成标准</b><p>每个界面至少在 1280dp、640dp、360dp 与 200% 字体下截图；不通过不算完成。</p></div></div>
+    <div class="rule"><div><b>交互映射表</b><p>官方悬停→长按/提示、右键→更多菜单、滑出菜单→参数条；无法映射的入口隐藏或禁用。</p></div></div>
+    <div class="rule"><div><b>格式变更走 ADR</b><p>页面/备份格式变更先写迁移与回滚方案，补 round-trip 测试；元数据与图片引用从一开始就纳入备份。</p></div></div>
+    <div class="rule"><div><b>构建卫生</b><p>源码副本 `/MIR`；搬包/删文件后 clean build；发布前核对 APK 哈希、版本、测试数与文档一致。</p></div></div>
+    <div class="rule"><div><b>验证可复现</b><p>点击用 uiautomator bounds；截图命名并归档；模拟器输入先收键盘；不把模拟器帧率当性能结论。</p></div></div>
+    <div class="rule"><div><b>视觉/性能门禁</b><p>关键界面建截图基线；性能改动同条件前后采样；没有基线就不声明提升。</p></div></div>
+  </div>
+</section>
+
+<footer>
+  统计口径：有文档记录的返工轮次（设置 11、底栏 10+、文本工具条 7、窄屏 6、交互 6、数据 6、图标 5、Compose 5、构建 5、菜单 4、颜色 4、性能 4、模板 3、列表 3、早期视觉方向 2）。早期设计稿见 <a href="../design/visual-refresh-v0.8.md">visual-refresh-v0.8.md</a>、<a href="2026-10-30-visual-preview.md">2026-10-30-visual-preview.md</a> 与 <a href="icon-directions-2026-10-31.html">icon-directions</a>。<br>
+  关联文档：<a href="UI_DESIGN_ITERATIONS.md">UI_DESIGN_ITERATIONS.md</a> ·
+  <a href="DEVELOPMENT_SUMMARY_20261104.md">DEVELOPMENT_SUMMARY_20261104.md</a> ·
+  <a href="SETTINGS_IMPROVEMENTS.md">SETTINGS_IMPROVEMENTS.md</a> ·
+  <a href="WORK_CHECKLIST.md">WORK_CHECKLIST.md</a> ·
+  <a href="TASKS_20261101.md">TASKS_20261101.md</a>
+</footer>
+</div>
+</body>
+</html>

@@ -69,6 +69,7 @@ Release 构建启用 R8（`isMinifyEnabled = true`）并使用 `app/proguard-rul
 - 页面格式 25；当前发布版见 `releases/lingye-v0.15-architecture-batch34-release-20261104.apk`。
 - 开发全流程、主要问题与限制：`docs/affine-audit/DEVELOPMENT_SUMMARY_20261104.md`。
 - UI 设计逐轮修改记录：`docs/affine-audit/UI_DESIGN_ITERATIONS.md`。
+- 问题频率、根源与复发风险可视化：`docs/affine-audit/problem-navigation.html`。
 
 ## 平板模拟器
 

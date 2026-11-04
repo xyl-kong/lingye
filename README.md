@@ -8,6 +8,7 @@
   - `tablet-workspace/README.md`：功能说明、构建方式与使用限制（主文档）。
   - `tablet-workspace/docs/affine-audit/DEVELOPMENT_SUMMARY_20261104.md`：开发全流程、主要问题与限制。
   - `tablet-workspace/docs/affine-audit/UI_DESIGN_ITERATIONS.md`：UI 设计逐轮修改记录（设置 11 轮、底栏 10+ 轮等）。
+  - `tablet-workspace/docs/affine-audit/problem-navigation.html`：问题频率、根源与复发风险可视化导览。
   - `tablet-workspace/docs/affine-audit/ARCHITECTURE_AUDIT_20261103.md`：架构批次记录（batch1–34）。
   - `tablet-workspace/releases/lingye-v0.15-architecture-batch34-release-20261104.apk`：当前 Release。
 - `docs/`：项目早期的设计规格与路线图。
