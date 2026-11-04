@@ -1,0 +1,2 @@
+-dontwarn javax.annotation.**
+-dontwarn org.slf4j.**

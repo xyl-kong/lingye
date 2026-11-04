@@ -1,0 +1,15 @@
+.gradle-workspace/
+.tools/
+.android-workspace/
+android-tools/
+
+# Android build outputs and local machine files
+tablet-workspace/.gradle/
+tablet-workspace/.kotlin/
+tablet-workspace/build/
+tablet-workspace/app/build/
+tablet-workspace/local.properties
+tablet-workspace/debug.keystore
+
+# Audit evidence contains local backups and large screenshots; keep local, do not push
+tablet-workspace/docs/affine-audit/evidence/
