@@ -1,0 +1,80 @@
+# 灵页开发全流程与问题总结（2026-11-04）
+
+本文汇总 0.15 开发版从功能搭建到架构治理的全过程、遇到的主要问题及处理方式，以及仍未验证或明确不支持的范围。逐批细节见 `ARCHITECTURE_AUDIT_20261103.md`、`DATA_SAFETY_INDEX.md`、`TASKS_20261101.md` 与 `WORK_CHECKLIST.md`。
+
+## 1. 项目概况
+
+- 产品：灵页（Lingye），Android 平板离线文档 + 无界白板应用。
+- 技术栈：Kotlin、Jetpack Compose、单 Activity、`AtomicFile` 二进制页面存储、SharedPreferences 辅助元数据；Release 使用 R8。
+- 页面格式：25（含多文件夹、Tags、收藏、连线端点/文字、emoji 图标、图形与笔记独立阴影、图形字体与字符级文本格式）。
+- 构建：JDK 21、Android SDK 36、Gradle 8.13；调试签名与 `local.properties` 不入库。
+- 验证：`testDebugUnitTest`（434 项 JVM 测试）+ Release 构建 + 模拟器（2560×1600，density 320）冒烟。
+
+## 2. 开发阶段
+
+### 2.1 功能完善（v0.2–v0.14）
+
+- 文档：段落/标题/待办/列表/引用/代码/分隔线、块拖拽、斜杠菜单、Markdown 导入导出、共享块与共享撤销、数据库（表格/看板/列表/日历）、双向链接、Journal、模板、Tags、收藏、多文件夹、回收站、搜索。
+- 白板：平移缩放、笔迹/高亮/橡皮、矩形/圆形/直线、图片、卡片/笔记、思维导图、Frame、连接线（曲线/端点/文字/动效）、多选/组合/对齐/图层/锁定、模板画廊、演示模式、手写笔优先。
+- 界面：AFFiNE 风格侧栏与图标、深浅色、设置页（92% 弹窗、单/双栏）、快捷键、概览、备份/恢复、图片导入与缓存。
+
+### 2.2 架构治理（batch1–batch34）
+
+按“先安全、再性能、后结构”的顺序推进：
+
+1. **拆分巨型文件（batch1–batch14）**：`MainActivity` 从约 7,989 行降到 2,656 行；抽出 `BlocksEditor`、`CanvasEditor`、`CanvasRendering`、`CanvasBottomBar`、`CanvasPointerInputs`、`CanvasDialogs`、`CanvasEditorState`、`CanvasShortcutHandler`、`CanvasInlineEditor`、各类对象工具条、`CanvasObjectToolbarHost`、`CanvasEditorCommands` 等；`CanvasEditor` 由 3,697 行降到 815 行。
+2. **P0 数据链路收口（batch15–batch17）**：`PageRepository` 单线程写队列（主线程只快照，编码/落盘在写线程，同步写等待并重抛错误）；`WorkspaceRepository` 统一页面加载、会话、语言、工具偏好与设置；元数据恢复收口到 `PageMetadataRepository`。
+3. **P1 性能与一致性（batch18–batch27）**：
+   - 文本排版/测宽 LRU、Typeface 缓存、连线采样 LRU、每帧连线渲染与形状索引；
+   - 图片孤儿扫描（含历史字节保护）、256/512/1024/1600 分档解码、图片缓存统计、OpenDocument 选择器与 `ImageDecoder` 回退；
+   - 侧栏行/首页列表/卡片/标签页改用不可变模型 + 页面 ID key，搜索索引按 revision 失效；
+   - 通用 `MenuRow`、`MenuSectionLabel`、`HelpGlyph`，统一菜单与帮助图标。
+4. **P2 包边界（batch28–batch34）**：单模块内建立 `core`、`platform.image`、`ui.model`、`data.metadata`、`data.pages`、`data.images`、`data.backup` 包；`PageStore` 依次拆出图片（`PageImageStore`）与备份/URI（`BackupStore`），最后整体迁入 `data.pages`。尚未新增 Gradle 模块。
+
+## 3. 主要问题与解决方式
+
+| 问题 | 根因 | 处理 / 现状 |
+|---|---|---|
+| 键盘 Delete 删不掉文本框 | 快捷键处理未覆盖选中文本对象 | 选中对象时 Delete 删除；编辑中 Delete 编辑文字；Esc/Ctrl+Enter/点外部退出编辑 |
+| 内联编辑器“完成”按钮影响观感 | 常驻按钮破坏画布 | 移除按钮；点击画布外部、Esc、Ctrl+Enter 退出；编辑时隐藏选中框与手柄 |
+| 文本框左右“＋”移动后停在原位、部分选中不出现 | 页面对象原地修改，Compose 强跳过按引用比较 | 改为值类型 `AdjacentTextAnchor`，由 `geometryRevision` 重算；拖动时隐藏，边缘隐藏该侧 |
+| 设置页圆圈“?”未居中 | 图标字符基线/内边距不一致 | 新增 `HelpGlyph`：原生 Paint 按字体度量在圆心绘制 |
+| 撤销后出现“不可选中的文本框” | 删除/撤销后 `cardEdit` 指向失效索引，编辑器 Surface 残留 | 删除时清空 `cardEdit`；`LaunchedEffect` 检测目标失效自动退出 |
+| 新建文件夹后侧栏“看不到” | 侧栏 `LazyListState` 恢复了上次滚动偏移，文件夹行在视口上方 | 诊断为滚动位置而非渲染 bug；上滚即见，未保留猜测性刷新代码 |
+| 备份恢复后 Journal/模板丢失 | 元数据不在页面文件与旧备份 ZIP | `lingye-backup-2` 增加 `metadata.dat`，恢复时按新页面 ID 写回；兼容 `lingye-backup-1` |
+| 页面保存阻塞、旧快照覆盖新状态 | 主线程编码 + 多次直接保存 | 单线程写队列 + 提交顺序 + 同步等待 + 自动保存成功回调推进 revision |
+| 大画布每帧重复排版/连线采样 | 绘制/命中重复计算 | 文本/Typeface/连线采样缓存 + 每帧索引；未做空间索引 |
+| 图片格式支持不明确 | 仅依赖 BitmapFactory | 明确 JPEG/PNG/WebP/GIF/BMP 稳定；HEIF Android 8+（设备相关）、AVIF Android 14+；动画仅首帧；SVG/TIFF/PSD 不支持；API 28+ 用 ImageDecoder 回退 |
+| Release 启动崩溃（ART VerifyError） | 非混淆 Release 的大型 `CanvasEditor` 方法 | 启用 R8；已通过模拟器主要界面验证 |
+| 构建副本残留旧类 | 移动源码后构建副本用 `/E` 同步，旧根包文件未删除 | 改为 `robocopy /MIR` 镜像同步；避免同名类同时进入 APK |
+| 模拟器输入误触 | Gboard 覆盖下半屏，`input tap` 命中键盘 | 先收键盘或按 UI 层次 bounds 点击；关键操作前 `uiautomator dump` |
+| 测试页截图/模拟器卡顿 | 模拟器渲染与对象数量影响 | 不把模拟器帧率当作性能结论；性能声明需同条件基线 |
+
+## 4. 明确限制与未验证项
+
+- **设备级完整备份恢复（U-PROJ-022）**：只验证了 ZIP 编解码、旧格式兼容与恢复 ID 映射；未执行“导出→清空→恢复”全流程。
+- **画布图片解码交互**：多批只做了编译与页面/白板冒烟，测试页视口没有图片对象；未插入新图片验证解码/缓存/裁剪。
+- **真实手写笔**：压感、手掌误触、延迟未在真机验证；模拟器只验证了模拟手写笔。
+- **性能基线**：batch18 起未做同条件帧时间前后对比；列表滚动仍有卡顿，未达到 5% 严格目标。
+- **多模块化/ViewModel/DI**：仅完成包边界；Gradle 模块拆分、ViewModel、Hilt 尚未开始。
+- **画布能力**：无局部像素橡皮、无压感、无协作/云同步；思维导图与 Frame 仅支持单层/几何包含；SVG/TIFF/PSD 无法导入。
+- **文档能力**：列表为单层结构；代码块无语言高亮；快捷键固定映射、不可自定义；斜杠菜单无方向键导航。
+- **数据兼容**：新版可读旧页面，旧版不能读格式 25；卸载可能删除本地数据，开发版不应作为唯一副本。
+
+## 5. 数据与发布规则
+
+- 页面格式保持 25；不删除/覆盖用户页面、图片、恢复用 `.tar` 备份与测试数据。
+- 图片清理只做“确认式删除”，不做后台自动删除。
+- 不在没有完整备份的情况下运行 `connectedDebugAndroidTest`。
+- 每批验收：JVM 测试 0 失败 → Release 构建 → 模拟器冒烟 → 记录未验证项 → 更新四份文档。
+- 发布目录只保留最新 Release APK（本次清理保留 batch34），历史版本哈希仍记录在审计文档中。
+
+## 6. 构建与验证命令
+
+```powershell
+$env:JAVA_HOME = "D:\apply\andriod\android-1\jbr"
+robocopy "<源码 app\src>" "<英文副本 app\src>" /MIR
+& "C:\Users\17482\.gradle\wrapper\dists\gradle-8.13-bin\ap7pdhvhnjtc6mxtzz89gkh0c\gradle-8.13\bin\gradle.bat" -p "<英文副本>" testDebugUnitTest assembleRelease
+```
+
+模拟器截图：`adb shell screencap -p /sdcard/x.png` 后 `adb pull`；不要用 PowerShell 重定向写二进制。
