@@ -63,6 +63,12 @@ Release 构建启用 R8（`isMinifyEnabled = true`）并使用 `app/proguard-rul
 
 当前 Release 构建在 Pixel Tablet API 35、184 页工作区上冷启动约 1.19 秒；连续 8 次列表滚动后 `gfxinfo` 为 192 帧、24 个卡顿帧（12.50%），50/90/95/99 分位分别为 23/36/38/42 ms。页面修改时间、占用空间统计已移出 Compose 主线程，侧栏筛选增加缓存，AFFiNE 图标路径改为全局复用；相对优化前同一模拟器采样有明显改善，但尚未达到 5% 的严格目标。
 
+## 仓库
+
+- GitHub: https://github.com/xyl-kong/lingye
+- 页面格式 25；当前发布版见 `releases/lingye-v0.15-architecture-batch34-release-20261104.apk`。
+- 开发全流程、主要问题与限制：`docs/affine-audit/DEVELOPMENT_SUMMARY_20261104.md`。
+
 ## 平板模拟器
 
 已下载并校验 Android 15 Google APIs x86_64 系统镜像，创建 Pixel Tablet 虚拟设备。`../android-tools` 保存下载的 SDK 和原设备配置；`start-tablet-emulator.ps1` 使用英文路径的测试副本，以避免模拟器对中文路径的兼容问题。
