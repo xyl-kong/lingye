@@ -154,6 +154,8 @@ class PageStore(private val context: Context) {
     fun orphanImages(pages: List<Page>, templates: List<CardTemplate>, shared: List<SharedBlock>): List<String> =
         imageStore.orphanImages(pages, templates, shared)
     fun imageBytes(names: List<String>): Long = imageStore.imageBytes(names)
+    fun imageData(name: String): ByteArray? = imageStore.imageData(name)
+    fun imageExists(name: String): Boolean = imageStore.imageExists(name)
     fun deleteImages(names: List<String>): Int = imageStore.deleteImages(names)
     fun loadFolders(): List<String> { val file = AtomicFile(File(context.filesDir, "folders.dat")); return if (file.baseFile.exists() || File(file.baseFile.path + ".bak").exists()) file.openRead().use { FolderCatalog.decode(it.readBytes()) } else emptyList() }
     fun saveFolders(folders: List<String>) { val file = AtomicFile(File(context.filesDir, "folders.dat")); val bytes = FolderCatalog.encode(folders); val stream = file.startWrite(); try { stream.write(bytes); file.finishWrite(stream) } catch (e: Exception) { file.failWrite(stream); throw e } }

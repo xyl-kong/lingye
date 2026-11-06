@@ -81,4 +81,24 @@ class MarkdownCodecTest {
         assertEquals("code", code.type)
         assertEquals("val answer = 42\nprintln(answer)", code.content)
     }
+
+    @Test
+    fun imageBlockRoundTripsWhenTheLocalImageExists() {
+        val page = Page.create("Images")
+        page.addBlock("image", "abc.img")
+
+        val markdown = MarkdownCodec.encode(page)
+        val decoded = MarkdownCodec.decode(markdown, imageExists = { it == "abc.img" })
+
+        assertEquals(listOf("image"), decoded.blocks.map { it.type })
+        assertEquals("abc.img", decoded.blocks.single().content)
+    }
+
+    @Test
+    fun missingImageStaysAsTextInsteadOfCreatingABrokenImageBlock() {
+        val decoded = MarkdownCodec.decode("![Missing](missing.img)", imageExists = { false })
+
+        assertEquals(listOf("paragraph"), decoded.blocks.map { it.type })
+        assertTrue(decoded.blocks.single().content.contains("missing.img"))
+    }
 }

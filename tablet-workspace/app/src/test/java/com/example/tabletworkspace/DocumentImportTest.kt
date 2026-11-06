@@ -85,6 +85,25 @@ class DocumentImportTest {
         assertTrue(html.contains("a &lt; b"))
     }
 
+    @Test
+    fun htmlExportEmbedsImageBytesAsDataUri() {
+        val page = Page.create("Image").also { it.addBlock("image", "a.img") }
+        val png = byteArrayOf(
+            0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte(),
+            0x0D, 0x0A, 0x1A, 0x0A
+        )
+        val html = HtmlExporter.encode(page, mapOf("a.img" to png))
+        assertTrue(html.contains("data:image/png;base64,"))
+        assertTrue(!html.contains("[Image] a.img"))
+    }
+
+    @Test
+    fun htmlExportFallsBackToPlaceholderWhenImageIsMissing() {
+        val page = Page.create("Image").also { it.addBlock("image", "missing.img") }
+        val html = HtmlExporter.encode(page)
+        assertTrue(html.contains("[Image] missing.img"))
+    }
+
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {
         val bytes = ByteArrayOutputStream()
         ZipOutputStream(bytes).use { zip ->

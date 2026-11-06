@@ -6,6 +6,7 @@ import com.example.tabletworkspace.BackupArchive
 import com.example.tabletworkspace.CardTemplate
 import com.example.tabletworkspace.FolderCatalog
 import com.example.tabletworkspace.Page
+import com.example.tabletworkspace.PageLinks
 import com.example.tabletworkspace.SharedBlock
 import com.example.tabletworkspace.canvasPage
 import com.example.tabletworkspace.data.metadata.PageMetadataSnapshot
@@ -59,6 +60,8 @@ class BackupStore(private val store: PageStore) {
                     restored.remapSharedReferences(sharedMapping)
                 }
             }
+            val pageIdMap = backup.pages.zip(imported).associate { (old, new) -> old.id to new.id }
+            imported.forEach { PageLinks.remapPageLinks(it, pageIdMap) }
             imported.forEach { page -> val file = File(store.pagesDirectory, "${page.id}.page"); check(!file.exists()); created.add(file); store.save(page) }
             val previousTemplates = store.loadTemplates(); val merged = previousTemplates.toMutableList(); backup.templates.forEach { t -> if (merged.none { it.name.equals(t.name, true) }) merged.add(t.remapTemplateImages(mapping)) }
             store.saveTemplates(merged); try { store.saveSharedBlocks(mergedShared); store.saveFolders(existingFolders) } catch (e: Exception) { store.saveTemplates(previousTemplates); store.saveSharedBlocks(oldShared); throw e }

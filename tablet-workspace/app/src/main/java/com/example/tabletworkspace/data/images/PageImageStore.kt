@@ -90,6 +90,12 @@ class PageImageStore(context: Context, private val historyDir: File) {
     fun imageBytes(names: List<String>): Long =
         names.sumOf { name -> File(directory, name).takeIf { it.isFile }?.length() ?: 0L }
 
+    /** Raw bytes of one stored image, used by self-contained HTML export. */
+    fun imageData(name: String): ByteArray? =
+        File(directory, name).takeIf { it.isFile }?.let { runCatching { it.readBytes() }.getOrNull() }
+
+    fun imageExists(name: String): Boolean = File(directory, name).isFile
+
     /** Deletes the given image files; returns how many were removed. */
     fun deleteImages(names: List<String>): Int {
         var removed = 0

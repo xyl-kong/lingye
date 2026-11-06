@@ -203,7 +203,8 @@ object DocumentImport {
 
 /** HTML export for the page "Export > Export as HTML" action. */
 object HtmlExporter {
-    fun encode(page: Page): String = buildString {
+    /** [images] lets document image blocks become self-contained data URIs. */
+    fun encode(page: Page, images: Map<String, ByteArray> = emptyMap()): String = buildString {
         append("<!doctype html><html><head><meta charset=\"utf-8\"><title>")
         append(escape(page.title.ifBlank { "Untitled" }))
         append("</title></head><body>")
@@ -218,7 +219,16 @@ object HtmlExporter {
                     "quote" -> append("<blockquote>").append(escape(block.content)).append("</blockquote>")
                     "code" -> append("<pre><code>").append(escape(block.content)).append("</code></pre>")
                     "divider" -> append("<hr>")
-                    "image" -> append("<p>[Image] ").append(escape(block.content)).append("</p>")
+                    "image" -> {
+                        val data = images[block.content]
+                        if (data == null) {
+                            append("<p>[Image] ").append(escape(block.content)).append("</p>")
+                        } else {
+                            append("<p><img src=\"data:").append(mimeType(data)).append(";base64,")
+                                .append(java.util.Base64.getEncoder().encodeToString(data))
+                                .append("\" alt=\"\"></p>")
+                        }
+                    }
                     else -> if (block.content.isNotBlank()) append("<p>").append(escape(block.content)).append("</p>")
                 }
                 else -> append("<h").append(level.coerceIn(1, 6)).append('>')
@@ -226,6 +236,19 @@ object HtmlExporter {
             }
         }
         append("</body></html>")
+    }
+
+    private fun mimeType(bytes: ByteArray): String = when {
+        bytes.size >= 4 && bytes[0] == 0x89.toByte() && bytes[1] == 'P'.code.toByte() &&
+            bytes[2] == 'N'.code.toByte() && bytes[3] == 'G'.code.toByte() -> "image/png"
+        bytes.size >= 3 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() && bytes[2] == 0xFF.toByte() -> "image/jpeg"
+        bytes.size >= 4 && bytes[0] == 'G'.code.toByte() && bytes[1] == 'I'.code.toByte() &&
+            bytes[2] == 'F'.code.toByte() && bytes[3] == '8'.code.toByte() -> "image/gif"
+        bytes.size >= 12 && bytes.copyOfRange(0, 4).contentEquals("RIFF".toByteArray()) &&
+            bytes.copyOfRange(8, 12).contentEquals("WEBP".toByteArray()) -> "image/webp"
+        bytes.size >= 2 && bytes[0] == 'B'.code.toByte() && bytes[1] == 'M'.code.toByte() -> "image/bmp"
+        bytes.size >= 12 && bytes.copyOfRange(4, 8).contentEquals("ftyp".toByteArray()) -> "image/avif"
+        else -> "application/octet-stream"
     }
 
     private fun escape(value: String): String = value

@@ -1391,3 +1391,14 @@
 - 数据：201 页面文件、20 历史、2 图片、All Docs 192、`ToolbarTest` 1,937 字节、格式 25；未增删页面。
 - 发布：`lingye-v0.15-architecture-batch34-release-20261104.apk`（3,440,431 字节，SHA-256 `E47897F7826A0E5C5977F2790856C8B67D083169FA03BBF09797AA0C232F8CD9`）。
 - 说明文档：`ARCHITECTURE_AUDIT_20261103.md`、`DATA_SAFETY_INDEX.md`、`P2_MODULE_PLAN.md`。
+
+### 2026-11-06 导入/导出能力与说明完善
+
+- 导入对话框去掉 Obsidian/Bear 的“实验性”；帮助文案补充目录、附件、wiki 链接、标签限制。
+- 设置 → 储存新增“导入与导出能力”：完整 ZIP、Markdown、HTML、快照的内容与限制；单文件 20 MB、ZIP 100 MB / 300 条。
+- HTML 导出内嵌文档图片为 data URI；Markdown 同机图片引用可往返，缺图降级为文本。
+- 完整备份恢复重映射画布“链接文档”卡片到新页面 ID。
+- 新增 5 项测试；439 项 JVM 测试 0 失败。
+- 数据：201 页面文件、20 历史、2 图片、All Docs 192、`ToolbarTest` 1,937 字节、格式 25；未增删页面。
+- 发布：`lingye-v0.15-architecture-batch35-release-20261106.apk`（3,440,443 字节，SHA-256 `65A7351DD68ECB5F506A926E9961848FAF1CA444A1907BFD031A4DC509DF24D8`）。
+- 说明文档：`ARCHITECTURE_AUDIT_20261103.md`、`DATA_SAFETY_INDEX.md`、`README.md`。

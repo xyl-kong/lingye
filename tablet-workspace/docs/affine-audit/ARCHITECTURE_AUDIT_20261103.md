@@ -425,6 +425,18 @@
 - 数据：201 页面文件、20 历史、2 图片、All Docs 192、`ToolbarTest` 1,937 字节、格式 25；未增删页面。
 - 发布：`releases/lingye-v0.15-architecture-batch34-release-20261104.apk`，3,440,431 字节，SHA-256 `E47897F7826A0E5C5977F2790856C8B67D083169FA03BBF09797AA0C232F8CD9`。
 
+## 4.33 第三十五批：导入/导出能力与说明完善
+
+- 导入对话框去掉 Obsidian 与 Bear 名称中的“实验性”标注；帮助文案补充目录、附件、wiki 链接与标签不会保留。
+- 设置 → 储存新增“导入与导出能力”分区：逐项说明完整备份 ZIP、Markdown、HTML、快照保留的内容与限制（20 MB 单文件、100 MB / 300 条 ZIP、媒体不导入）。
+- HTML 导出新增文档图片内嵌：按图片魔数识别 PNG/JPEG/GIF/WebP/BMP/AVIF 并写成 `data:` URI；找不到图片时保留 `[Image] 文件名` 占位。
+- Markdown 导入新增图片块识别：`![](...)` 只在本地图片存在时恢复为图片块，否则保留为文本，避免生成缺图块；Markdown 导出/导入在同一设备上可往返已存在的图片引用。
+- 完整备份恢复新增页面链接重映射：按备份页面 ID → 新页面 ID 重写画布 `pageLink` 卡片的 `body`；指向备份外页面的链接保持不变。新增 `PageLinksTest` 用例。
+- 新增 5 项测试（Markdown 图片往返/缺图、HTML data URI/占位、页面链接重映射）；439 项 JVM 测试 0 失败。
+- 设备冒烟：设置 → 储存显示新的能力说明；导入对话框显示“Obsidian 仓库”“Bear (.bear2bk)”且无“实验性”；其余界面正常。
+- 页面格式 25、备份格式 `lingye-backup-2` 与存储路径未变。
+- 发布：`releases/lingye-v0.15-architecture-batch35-release-20261106.apk`，3,440,443 字节，SHA-256 `65A7351DD68ECB5F506A926E9961848FAF1CA444A1907BFD031A4DC509DF24D8`。
+
 ## 5. 目标架构
 
 建议按职责收敛为以下包/模块（当前先保持单模块，后续可迁移）：

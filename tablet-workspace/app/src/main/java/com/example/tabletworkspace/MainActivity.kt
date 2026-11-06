@@ -1146,7 +1146,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                     if (revision != savedRevision && !saveCurrent()) error = text("当前页面保存失败","Current page could not be saved")
                     val content = withContext(Dispatchers.IO) { store.readText(uri) }
                     val document = withContext(Dispatchers.Default) {
-                        MarkdownCodec.decode(content, text("导入页面","Imported page"))
+                        MarkdownCodec.decode(content, text("导入页面","Imported page"), store::imageExists)
                     }
                     val page = document.toPage(text("导入页面","Imported page"))
                     if (!trashMode && folderFilter != null) page.folders.add(folderFilter!!)
@@ -1177,7 +1177,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
             return
         }
         val created = imported.map { item ->
-            val document = MarkdownCodec.decode(item.markdown, item.title)
+            val document = MarkdownCodec.decode(item.markdown, item.title, store::imageExists)
             val page = document.toPage(item.title)
             if (!trashMode && folderFilter != null) page.folders.add(folderFilter!!)
             repository.save(page)
@@ -1247,7 +1247,15 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
             ioBusy = true
             scope.launch {
                 try {
-                    val content = withContext(Dispatchers.Default) { HtmlExporter.encode(page.snapshot()) }
+                    val snapshot = page.snapshot()
+                    val images = withContext(Dispatchers.IO) {
+                        snapshot.blocks.filter { it.type == "image" }
+                            .map { it.content }
+                            .distinct()
+                            .mapNotNull { name -> store.imageData(name)?.let { name to it } }
+                            .toMap()
+                    }
+                    val content = withContext(Dispatchers.Default) { HtmlExporter.encode(snapshot, images) }
                     withContext(Dispatchers.IO) { store.writeText(uri, content) }
                     error = null
                     notice = text("HTML 已导出", "HTML exported")

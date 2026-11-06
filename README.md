@@ -10,7 +10,7 @@
 
 > 当前为 **0.15 开发版**，页面格式 **25**。开发版不应作为唯一资料存储，升级/卸载前请先导出备份。
 >
-> **下载**：[最新 Release](https://github.com/xyl-kong/lingye/releases/latest) · [直接下载 batch34 APK](https://github.com/xyl-kong/lingye/releases/download/v0.15-batch34/lingye-v0.15-architecture-batch34-release-20261104.apk)
+> **下载**：[最新 Release](https://github.com/xyl-kong/lingye/releases/latest) · [直接下载 batch35 APK](https://github.com/xyl-kong/lingye/releases/download/v0.15-batch35/lingye-v0.15-architecture-batch35-release-20261106.apk)
 
 ## 项目状态
 
@@ -52,6 +52,22 @@
 - 键盘快捷键：工具键、撤销/重做、全选、删除、方向键微移、缩放；文档 Ctrl+B/I/U 与标题切换。
 - 所有图片颜色入口共用取色器；菜单统一 `MenuRow` 样式。
 
+## 导入与导出
+
+| 方式 | 导出内容 | 导回软件 | 主要限制 |
+|---|---|---|---|
+| 完整备份 ZIP（`lingye-backup-2`） | 页面二进制（格式 25）、图片、文件夹、模板、共享块、页面元数据 | ✅ 恢复为新增页面，不覆盖当前内容 | 不含撤销历史、应用设置与会话；页面 ID 会重新生成；页面链接卡片会重映射到恢复后的新页面 |
+| Markdown | 标题、正文、标题块、待办、列表、引用、代码、分隔线；文档图片写成内部文件名 | ✅ 文本块；同机已存在的图片会恢复为图片块 | 画布对象、数据库结构、字符级格式、Tags/文件夹/图标不导出；外部图片路径不会导入 |
+| HTML | 正文；文档图片内嵌为 `data:` URI | ⚠️ 只能导入文字 | 图片、表格结构、CSS、画布对象不会恢复 |
+| 快照 JSON（`lingye-snapshot-1`） | 标题、正文、文本块类型/内容/勾选 | ✅ 文本块 | 不含画布、图片、数据库结构、文件夹/标签 |
+| 复制为 Markdown | 同 Markdown，写入剪贴板 | — | 没有剪贴板导入入口 |
+
+导入对话框支持：Markdown、Markdown ZIP（媒体不导入）、HTML、Notion、Obsidian、Bear、Word `.docx`、灵页快照；OneNote 暂不支持。全部导入都会新增页面，不覆盖已有内容。
+
+限制：单个文本/HTML/快照文件 20 MB；ZIP 总计 100 MB、最多 300 个条目；压缩包内图片/附件不会导入；Obsidian 的 wiki 链接、附件与目录层级不保留；Word 只提取段落文字，标题样式、表格和图片会丢失。
+
+> 需要完整还原画布、图片和页面关系时，请使用完整备份 ZIP；Markdown/HTML/快照只适合文本迁移与阅读存档。
+
 ## 明确限制与未验证项
 
 | 能力 | 状态 |
@@ -91,10 +107,10 @@
 
 ## 安装
 
-1. 打开 [Releases](https://github.com/xyl-kong/lingye/releases/latest) 页面，下载最新的 `lingye-v0.15-...-release-*.apk`（当前为 [v0.15-batch34](https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch34)）。
+1. 打开 [Releases](https://github.com/xyl-kong/lingye/releases/latest) 页面，下载最新的 `lingye-v0.15-...-release-*.apk`（当前为 [v0.15-batch35](https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch35)）。
 2. 在平板的“设置 → 应用 → 特殊应用权限 → 安装未知应用”中，允许浏览器或文件管理器安装 APK。
 3. 打开下载的 APK 完成安装。首次启动会创建本地工作区，不需要账号或网络。
-4. 可选校验：`SHA-256` 应与 Release 说明一致。当前版本为 `E47897F7826A0E5C5977F2790856C8B67D083169FA03BBF09797AA0C232F8CD9`。
+4. 可选校验：`SHA-256` 应与 Release 说明一致。当前版本为 `65A7351DD68ECB5F506A926E9961848FAF1CA444A1907BFD031A4DC509DF24D8`。
 
 > 开发版可能与旧版本数据不兼容：升级前请先在“设置 → 储存/备份”导出备份；不要把它作为唯一资料存储。
 
@@ -120,11 +136,11 @@ Release 启用 R8（`app/proguard-rules.pro`）。调试签名可用项目根目
 
 ## 当前发布
 
-- Release 页面：https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch34
-- 文件：`tablet-workspace/releases/lingye-v0.15-architecture-batch34-release-20261104.apk`
-- 直接下载：https://github.com/xyl-kong/lingye/releases/download/v0.15-batch34/lingye-v0.15-architecture-batch34-release-20261104.apk
-- 大小：3,440,431 字节
-- SHA-256：`E47897F7826A0E5C5977F2790856C8B67D083169FA03BBF09797AA0C232F8CD9`
+- Release 页面：https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch35
+- 文件：`tablet-workspace/releases/lingye-v0.15-architecture-batch35-release-20261106.apk`
+- 直接下载：https://github.com/xyl-kong/lingye/releases/download/v0.15-batch35/lingye-v0.15-architecture-batch35-release-20261106.apk
+- 大小：3,440,443 字节
+- SHA-256：`65A7351DD68ECB5F506A926E9961848FAF1CA444A1907BFD031A4DC509DF24D8`
 
 历史版本的哈希保留在审计文档中；仓库只保留最新 APK。
 

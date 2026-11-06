@@ -28,6 +28,19 @@ object PageLinks {
                 source.shapes.any { shape -> targetId(shape) == target.id }
         }
 
+    /**
+     * Rewrites linked-document cards after a restore. [idMap] maps the ids in the backup to
+     * the new page ids; links to pages outside the backup are left untouched.
+     */
+    fun remapPageLinks(page: Page, idMap: Map<String, String>) {
+        for (i in page.shapes.indices) {
+            val shape = page.shapes[i]
+            val target = targetId(shape) ?: continue
+            val mapped = idMap[target] ?: continue
+            page.shapes[i] = shape.copy(body = mapped)
+        }
+    }
+
     /** Pages with only canvas content open as whiteboards; anything with text opens as a document. */
     fun opensAsWhiteboard(page: Page, currentWhiteboard: Boolean): Boolean = when {
         page.blocks.isNotEmpty() || page.text.isNotBlank() -> false

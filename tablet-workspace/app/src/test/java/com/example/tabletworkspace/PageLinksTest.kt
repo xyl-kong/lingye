@@ -107,4 +107,20 @@ class PageLinksTest {
         assertEquals(target.id, copy.body)
         assertEquals(PageLinks.SHAPE_TYPE, copy.type)
     }
+
+    @Test
+    fun restoreRemapsLinkedDocTargetsAndLeavesExternalLinksAlone() {
+        val source = Page.create("Source")
+        val target = Page.create("Target")
+        val external = Page.create("External")
+        source.addLinkedDoc(target, 0f, 0f)
+        source.addLinkedDoc(external, 0f, 0f)
+        val newTargetId = java.util.UUID.randomUUID().toString()
+
+        PageLinks.remapPageLinks(source, mapOf(target.id to newTargetId))
+
+        assertEquals(newTargetId, source.shapes[0].body)
+        assertEquals(external.id, source.shapes[1].body)
+        assertEquals(newTargetId, PageLinks.targetId(source.shapes[0]))
+    }
 }

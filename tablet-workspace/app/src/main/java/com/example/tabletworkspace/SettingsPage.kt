@@ -1155,8 +1155,8 @@ private fun DataSettings(
         }
     }
     SettingsDivider()
-    SettingsGroup(text("备份与恢复", "Backup and restore"), help = text("备份是完整 ZIP；恢复会复制为新页面，不覆盖当前内容。导入/导出 Markdown 只处理单个页面的可读文本与块结构。", "Backups are full ZIP files; restoring copies pages instead of overwriting. Markdown handles one page's readable text and block structure.")) {
-        Text(text("备份包含页面、图片、文件夹、模板和共享内容。恢复时会复制为新页面，不覆盖已有内容。", "Backups include pages, images, folders, templates and shared content. Restoring creates new pages and does not overwrite existing content."), color = LingyeColors.Muted, fontSize = 13.sp)
+    SettingsGroup(text("备份与恢复", "Backup and restore"), help = text("备份是完整 ZIP；恢复会复制为新页面，不覆盖当前内容。备份不包含撤销历史与应用设置。导入/导出 Markdown 只处理可读文本与块结构。", "Backups are full ZIP files; restoring copies pages instead of overwriting. Undo history and app settings are not included. Markdown only handles readable text and block structure.")) {
+        Text(text("备份包含页面、图片、文件夹、模板、共享内容和页面元数据。恢复时会复制为新页面，不覆盖已有内容。", "Backups include pages, images, folders, templates, shared content and page metadata. Restoring creates new pages and does not overwrite existing content."), color = LingyeColors.Muted, fontSize = 13.sp)
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SettingsActionButton(text("导出备份", "Export backup"), AppIcon.BACKUP, onBackup)
@@ -1167,6 +1167,28 @@ private fun DataSettings(
             SettingsActionButton(text("导入 Markdown", "Import Markdown"), AppIcon.DOCUMENT, onImportMarkdown)
             SettingsActionButton(text("导出 Markdown", "Export Markdown"), AppIcon.SAVE, onExportMarkdown)
         }
+    }
+    SettingsDivider()
+    SettingsGroup(
+        text("导入与导出能力", "Import and export capabilities"),
+        help = text("不同格式保留的内容不同；需要完整还原画布和图片时请使用完整备份 ZIP。", "Formats preserve different things; use the full ZIP backup when you need canvas and images restored.")
+    ) {
+        Text(
+            text(
+                "完整备份 ZIP：保留页面二进制、图片、文件夹、模板、共享块与页面元数据；恢复为新增页面，不覆盖当前内容，不含撤销历史与应用设置。\n" +
+                    "Markdown：保留标题、正文、待办、列表、引用、代码与分隔线；同一设备上已存在的本地图片引用可以往返，画布对象与数据库结构不会导出。\n" +
+                    "HTML：导出正文并把文档图片内嵌为 data URI；导入只提取文字，图片、表格结构和样式不会恢复。\n" +
+                    "快照 JSON：仅标题、正文与文本块；不含画布、图片与文件夹。\n" +
+                    "导入上限：单个文本/HTML/快照文件 20 MB；ZIP 总计 100 MB、最多 300 个条目，压缩包内媒体文件不会导入。",
+                "Full ZIP backup: page binaries, images, folders, templates, shared blocks and page metadata; restoring adds new pages without overwriting, but excludes undo history and app settings.\n" +
+                    "Markdown: headings, body, to-dos, lists, quotes, code and dividers; existing local image references round-trip on the same device, but canvas objects and database structure are not exported.\n" +
+                    "HTML: body text with document images embedded as data URIs; import extracts text only, so images, tables and styling are not restored.\n" +
+                    "Snapshot JSON: title, body and text blocks only; no canvas, images or folders.\n" +
+                    "Limits: 20 MB per text/HTML/snapshot file; ZIP up to 100 MB and 300 entries; media inside a ZIP is not imported."
+            ),
+            color = LingyeColors.Muted,
+            fontSize = 13.sp
+        )
     }
     SettingsNote(text("云同步与多人协作尚未启用，因此没有提供无法兑现的同步选项。", "Cloud sync and collaboration are not enabled, so no non-functional sync options are shown."))
 }

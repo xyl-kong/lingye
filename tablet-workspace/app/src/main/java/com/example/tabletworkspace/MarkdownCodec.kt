@@ -58,7 +58,7 @@ object MarkdownCodec {
         }
     }
 
-    fun decode(markdown: String, fallbackTitle: String = "Imported page"): MarkdownDocument {
+    fun decode(markdown: String, fallbackTitle: String = "Imported page", imageExists: (String) -> Boolean = { false }): MarkdownDocument {
         val lines = markdown.replace("\r\n", "\n").split('\n')
         var title = fallbackTitle
         var sawTitle = false
@@ -127,6 +127,15 @@ object MarkdownCodec {
                     flushParagraph()
                     blocks += Block("divider", "")
                 }
+                IMAGE_LINK.matches(line.trim()) -> {
+                    val name = IMAGE_LINK.matchEntire(line.trim())?.groupValues?.get(1).orEmpty()
+                    if (imageExists(name)) {
+                        flushParagraph()
+                        blocks += Block("image", name)
+                    } else {
+                        paragraph += line
+                    }
+                }
                 line.isBlank() -> flushParagraph()
                 else -> paragraph += line.removePrefix("\\")
             }
@@ -149,4 +158,5 @@ object MarkdownCodec {
     private const val MAX_BLOCK_HEADING_LEVEL = 5
     private val BLOCK_HEADING = Regex("^#{2,6} .*")
     private val LEADING_HASHES = Regex("^#{1,6} .*")
+    private val IMAGE_LINK = Regex("^!\\[[^\\]]*\\]\\(([^)]+)\\)$")
 }
