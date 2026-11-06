@@ -425,7 +425,15 @@
 - 设备冒烟：设置储存说明与导入对话框显示正常。
 - 数据：201 页面文件、20 历史、2 图片、All Docs 192、`ToolbarTest` 1,937 字节、格式 25；未增删页面，无崩溃。
 - Release `batch35` 已安装并冒烟；APK 3,440,443 字节，SHA-256 `65A7351DD68ECB5F506A926E9961848FAF1CA444A1907BFD031A4DC509DF24D8`。
-- 未验证：设备级完整备份导出→清空→恢复（维持 U-PROJ-022）；页面链接重映射仅由单元测试覆盖。
+- 未验证：完整 201 页工作区/图片/模板/共享块/页面链接的整包恢复；页面链接重映射仅由单元测试覆盖。
+
+### 3.43 设备级备份恢复与 APK 安装校验（2026-11-07）
+
+- 在独立隔离 AVD（复制验证用 AVD 后 `-wipe-data`，不触碰用户验证工作区）完成小规模全流程：新建 1 页文档并输入 `RESTORE_TEST_BODY` → 设置 → 储存 → 导出备份，得到 `lingye-backup.zip`（722 B，`format.txt=lingye-backup-2`，含 `pages/0.page`）→ `pm clear com.example.tabletworkspace` → 重新启动确认 0 文档 → 恢复该 ZIP → 首页显示 1 文档，打开后标题与正文 `RESTORE_TEST_BODY` 均保留。
+- 未覆盖：完整 201 页工作区、图片、模板、共享块、页面链接与页面元数据的整包恢复；页面链接重映射目前只有单元测试证据。
+- APK 安装校验：`aapt2 dump badging` 显示 `minSdkVersion 26`、`targetSdkVersion 36`、label“灵页”；`apksigner verify` 通过（APK Signature Scheme v2，debug 证书）；在 Android 15 x86_64 模拟器安装成功。APK 不含原生库，ABI 不构成限制。
+- 安装提示：开发版使用 debug 签名，Android/Play Protect 可能提示“未知来源/未经 Play 保护”，需允许安装；若平板上已安装不同签名的旧版本，覆盖安装会失败，只能卸载（会删除本地数据）后重装。
+- 清理：测试 AVD 与测试截图/备份文件已在验证后删除；原验证 AVD 未修改。
 
 1. **先备份当前数据**，即使当前数据不可读；不要直接覆盖非空 `pages/history`。
 2. 在 PC 上解包 tar，核对路径与 SHA；只把页面/历史/偏好复制回应用目录。
