@@ -79,7 +79,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -214,15 +213,17 @@ fun SettingsPage(
                     }
                 }
                 Box(Modifier.weight(1f).fillMaxHeight()) {
-                    SettingsCloseButton(
-                        onClose,
-                        text("关闭设置", "Close settings"),
-                        Modifier.align(Alignment.TopEnd).padding(8.dp).zIndex(2f)
-                    )
                     Column(Modifier.fillMaxSize()) {
+                        Box(Modifier.fillMaxWidth().height(48.dp)) {
+                            SettingsCloseButton(
+                                onClose,
+                                text("关闭设置", "Close settings"),
+                                Modifier.align(Alignment.TopEnd).padding(8.dp)
+                            )
+                        }
                         Column(
                             Modifier.weight(1f).verticalScroll(rememberScrollState())
-                                .padding(start = contentStart, end = contentEnd, top = 12.dp, bottom = 8.dp)
+                                .padding(start = contentStart, end = contentEnd, top = 0.dp, bottom = 8.dp)
                         ) {
                             categoryContent()
                         }
@@ -457,8 +458,8 @@ private fun EditorSettings(
     SettingsHeading(
         text("编辑器设置", "Editor settings"),
         text(
-            "排版、默认页面宽度和显示选项会立即应用于当前文档；新页面选项只影响之后新建的内容。",
-            "Typography, default page width and display options apply immediately; new-page options only affect content created later."
+            "字体、页面和显示选项会立即应用于当前文档；新建文档相关选项只影响之后创建的内容。",
+            "Font, page and display options apply immediately; new-document options only affect content created later."
         )
     )
     SegmentedChoice(
@@ -467,27 +468,9 @@ private fun EditorSettings(
     ) { editorTab = it }
     Spacer(Modifier.height(20.dp))
     if (editorTab == "document") {
-        SettingsGroup(text("排版", "Typography")) {
-            SettingsStackRow(
-                text("正文字号", "Base font size"),
-                text("立即应用于标题、正文和文本块。", "Applies immediately to title, body and text blocks."),
-                help = text("字号只影响文档阅读与编辑，不改变画布对象和已有图片。", "Font size only affects document reading and editing; canvas objects and images are unchanged.")
-            ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    CompactSlider(
-                        value = settings.editorFontSize,
-                        onValueChange = { onSettingsChange(settings.copy(editorFontSize = it).normalized()) },
-                        valueRange = 12f..24f,
-                        steps = 11,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text("${settings.editorFontSize.roundToInt()} px", color = LingyeColors.Primary, fontWeight = FontWeight.SemiBold)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
+        SettingsGroup(text("常规", "General")) {
             SettingsControlRow(
-                text("正文字体", "Body font"),
+                text("字体样式", "Font style"),
                 text("用于标题、正文和文本块。", "Used for title, body and text blocks."),
                 help = text("无衬线适合屏幕阅读，衬线适合长文，等宽适合代码和对齐；代码块始终使用等宽字体。", "Sans suits screen reading, serif suits long-form text, mono suits code and alignment. Code blocks always use mono."),
                 controlWidth = 280.dp
@@ -544,7 +527,7 @@ private fun EditorSettings(
                                         )
                                     }
                                 }
-                                Text("⌄", color = LingyeColors.Muted, fontSize = 12.sp)
+                                DropdownChevron()
                             }
                         }
                         if (settings.customFontFamily.isNotBlank()) {
@@ -556,63 +539,44 @@ private fun EditorSettings(
                     }
                 }
             }
-        }
-        SettingsDivider()
-        SettingsGroup(text("页面", "Page")) {
-            SettingsControlRow(
-                text("默认页面宽度", "Default page width"),
-                text("标准居中阅读，全宽铺满。", "Standard centers the page; full width fills the editor."),
-                help = text("未单独设置宽度的页面使用此值；在页面信息中可只调整当前页。", "Pages without their own width use this value; page info can override it for the current page.")
+            SettingsStackRow(
+                text("字号", "Font size"),
+                text("立即应用于标题、正文和文本块。", "Applies immediately to title, body and text blocks."),
+                help = text("字号只影响文档阅读与编辑，不改变画布对象和已有图片。", "Font size only affects document reading and editing; canvas objects and images are unchanged.")
             ) {
-                SegmentedChoice(
-                    listOf(false to text("标准", "Standard"), true to text("全宽", "Full width")),
-                    settings.documentFullWidth
-                ) { onSettingsChange(settings.copy(documentFullWidth = it)) }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    CompactSlider(
+                        value = settings.editorFontSize,
+                        onValueChange = { onSettingsChange(settings.copy(editorFontSize = it).normalized()) },
+                        valueRange = 12f..24f,
+                        steps = 11,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text("${settings.editorFontSize.roundToInt()} px", color = LingyeColors.Primary, fontWeight = FontWeight.SemiBold)
+                }
             }
-            Spacer(Modifier.height(8.dp))
-            SettingsToggleRow(
-                text("显示页面信息", "Show page info"),
-                text("在顶栏显示信息按钮。", "Show the info button in the header."),
-                settings.displayDocInfo,
-                help = text("关闭后仍可通过页面选项菜单查看信息。", "When off, page info remains available from the page options menu.")
-            ) { onSettingsChange(settings.copy(displayDocInfo = it)) }
-            SettingsToggleRow(
-                text("显示双向链接", "Show bi-directional links"),
-                text("在文档底部显示引用当前页面的链接。", "Show links that reference this document below the body."),
-                settings.displayBiDirectionalLink,
-                help = text("只影响文档底部面板的显示，不删除也不修改任何链接。", "Only affects the panel below the document; no links are deleted or changed.")
-            ) { onSettingsChange(settings.copy(displayBiDirectionalLink = it)) }
-            SettingsToggleRow(
-                text("代码块行号", "Code block line numbers"),
-                text("代码块左侧显示行号。", "Show line numbers beside code blocks."),
-                settings.codeBlockLineNumbers,
-                help = text("只影响代码块显示，不改变代码内容或导出文本。", "Display only; code content and exported text are unchanged.")
-            ) { onSettingsChange(settings.copy(codeBlockLineNumbers = it)) }
-        }
-        SettingsDivider()
-        SettingsGroup(text("新页面", "New pages")) {
             SettingsControlRow(
-                text("默认打开方式", "Default opening mode"),
+                text("创建文档的预设模式", "New doc default mode"),
                 text("新页面默认视图。", "Default view for new pages."),
                 help = text("只影响新建页面的初始视图；已有页面仍可在顶栏切换文档和白板。", "Only affects the initial view of new pages; existing pages can still switch modes in the header.")
             ) {
-                SegmentedChoice(
+                SettingsDropdown(
                     listOf(
                         DefaultPageMode.DOCUMENT to text("文档", "Document"),
                         DefaultPageMode.WHITEBOARD to text("白板", "Whiteboard")
                     ),
-                    settings.defaultPageMode
+                    settings.defaultPageMode,
+                    Modifier.fillMaxWidth()
                 ) { onSettingsChange(settings.copy(defaultPageMode = it)) }
             }
-            Spacer(Modifier.height(10.dp))
             SettingsToggleRow(
-                text("用日期自动命名", "Name with current date"),
+                text("用当前日期自动命名新文档", "Auto-title new docs with current date"),
                 text("按所选格式生成日期标题。", "Use the selected date format for new titles."),
                 settings.autoDateTitle,
                 help = text("开启后新建页面标题为当天日期，之后仍可手动重命名。", "New pages are titled with today's date; you can still rename them later.")
             ) { onSettingsChange(settings.copy(autoDateTitle = it)) }
             if (settings.autoDateTitle) {
-                Spacer(Modifier.height(8.dp))
                 SettingsStackRow(
                     text("日期格式", "Date format"),
                     text("自动命名使用的日期格式。", "Date format used for automatic titles."),
@@ -629,13 +593,43 @@ private fun EditorSettings(
                     ) { onSettingsChange(settings.copy(dateTitleFormat = it).normalized()) }
                 }
             }
-            Spacer(Modifier.height(8.dp))
             SettingsToggleRow(
                 text("显示添加图标选项", "Show add icon option"),
                 text("无图标的页面在顶栏显示添加入口。", "Show an add-icon entry for pages without an icon."),
                 settings.displayAddIcon,
                 help = text("只影响无图标页面的添加按钮；已有图标仍会显示。", "Only affects pages without an icon; existing icons stay visible.")
             ) { onSettingsChange(settings.copy(displayAddIcon = it)) }
+            SettingsToggleRow(
+                text("代码块行号", "Code block line numbers"),
+                text("在代码块左侧显示行号。", "Show line numbers beside code blocks."),
+                settings.codeBlockLineNumbers,
+                help = text("只影响代码块显示，不改变代码内容或导出文本。", "Display only; code content and exported text are unchanged.")
+            ) { onSettingsChange(settings.copy(codeBlockLineNumbers = it)) }
+        }
+        SettingsDivider()
+        SettingsGroup(text("页面", "Page")) {
+            SettingsControlRow(
+                text("默认文档页面宽度", "Default page width"),
+                text("标准居中阅读，全宽铺满。", "Standard centers the page; full width fills the editor."),
+                help = text("未单独设置宽度的页面使用此值；在页面信息中可只调整当前页。", "Pages without their own width use this value; page info can override it for the current page.")
+            ) {
+                SegmentedChoice(
+                    listOf(false to text("标准", "Standard"), true to text("全宽", "Full width")),
+                    settings.documentFullWidth
+                ) { onSettingsChange(settings.copy(documentFullWidth = it)) }
+            }
+            SettingsToggleRow(
+                text("显示文档信息", "Show doc info"),
+                text("在顶栏显示信息按钮。", "Show the info button in the header."),
+                settings.displayDocInfo,
+                help = text("关闭后仍可通过页面选项菜单查看信息。", "When off, page info remains available from the page options menu.")
+            ) { onSettingsChange(settings.copy(displayDocInfo = it)) }
+            SettingsToggleRow(
+                text("显示双向链接", "Show bi-directional links"),
+                text("在文档底部显示引用当前页面的链接。", "Show links that reference this document below the body."),
+                settings.displayBiDirectionalLink,
+                help = text("只影响文档底部面板的显示，不删除也不修改任何链接。", "Only affects the panel below the document; no links are deleted or changed.")
+            ) { onSettingsChange(settings.copy(displayBiDirectionalLink = it)) }
         }
     } else {
         CanvasSettings(
@@ -805,18 +799,22 @@ private fun CanvasSettings(
         fontSize = 13.sp
     )
     Spacer(Modifier.height(18.dp))
-    SettingsGroup(text("画布主题", "Canvas theme")) {
+    SettingsGroup(text("无界", "Edgeless")) {
         SettingsControlRow(
-            text("配色", "Color"),
-            text("浅色使用下方背景色；深色使用深色底与浅色网格。", "Light uses the background below; dark uses a dark surface and light grid."),
+            text("无界默认配色方案", "Edgeless default palette"),
+            text("浅色使用画布背景色；深色使用深色底与浅色网格；自动跟随界面主题。", "Light uses the canvas background; dark uses a dark surface and light grid; auto follows the app theme."),
             help = text("只影响画布显示，不改变已有对象颜色；导出与页面数据不受影响。", "Display only; existing object colors and page data are unchanged.")
         ) {
-            SegmentedChoice(
-                listOf("light" to text("浅色", "Light"), "dark" to text("深色", "Dark")),
-                settings.canvasTheme
+            SettingsDropdown(
+                listOf(
+                    "light" to text("浅色", "Light"),
+                    "dark" to text("深色", "Dark"),
+                    "auto" to text("自动", "Auto")
+                ),
+                settings.canvasTheme,
+                Modifier.fillMaxWidth()
             ) { onSettingsChange(settings.copy(canvasTheme = it).normalized()) }
         }
-        Spacer(Modifier.height(8.dp))
         SettingsToggleRow(
             text("按钮缩放", "Zoom buttons"),
             text("在画布右下角显示缩小/百分比/放大控件。", "Show zoom out, percentage and zoom in controls at the bottom-right."),
@@ -826,52 +824,30 @@ private fun CanvasSettings(
     }
     SettingsDivider()
     SettingsGroup(text("背景与卡片", "Background and cards")) {
-        SettingsLabel(
+        CollapsibleColorSetting(
             text("画布背景", "Canvas background"),
             text("只影响画布显示，不改变已有对象。", "Changes the canvas surface without altering existing objects."),
-            help = text("背景色只用于画布表面；已有图形、卡片和页面卡片保留自己的颜色。", "The background only affects the canvas surface; existing shapes, cards and page cards keep their own colors.")
-        )
-        ColorChoiceRow(
-            listOf(
+            help = text("背景色只用于画布表面；已有图形、卡片和页面卡片保留自己的颜色。", "The background only affects the canvas surface; existing shapes, cards and page cards keep their own colors."),
+            selected = settings.canvasBackground,
+            options = listOf(
                 text("纸白", "Paper") to 0xffffffff.toInt(),
                 text("暖白", "Warm") to 0xfffffbf5.toInt(),
                 text("薄荷", "Mint") to 0xfff5fbfa.toInt(),
                 text("淡紫", "Lavender") to 0xfff8f7ff.toInt()
-            ),
-            settings.canvasBackground
+            )
         ) { onSettingsChange(settings.copy(canvasBackground = it)) }
-        Spacer(Modifier.height(18.dp))
-        SettingsLabel(
+        CollapsibleColorSetting(
             text("新卡片颜色", "New card color"),
             text("用于卡片预设和工作区模板之外的新卡片。", "Used for newly inserted cards."),
-            help = text("只影响之后新建的卡片；模板和已有卡片的颜色保持不变。", "Only affects newly inserted cards; templates and existing cards keep their colors.")
-        )
-        ColorChoiceRow(
-            listOf(
+            help = text("只影响之后新建的卡片；模板和已有卡片的颜色保持不变。", "Only affects newly inserted cards; templates and existing cards keep their colors."),
+            selected = settings.cardColor,
+            options = listOf(
                 text("雾蓝", "Mist") to 0xfff2f5ff.toInt(),
                 text("白色", "White") to 0xffffffff.toInt(),
                 text("暖黄", "Warm yellow") to 0xfffff5d6.toInt(),
                 text("淡粉", "Rose") to 0xffffeef3.toInt()
-            ),
-            settings.cardColor
+            )
         ) { onSettingsChange(settings.copy(cardColor = it)) }
-        Spacer(Modifier.height(18.dp))
-        SettingsLabel(
-            text("新 Frame 背景", "New frame background"),
-            text("新建 Frame 使用此背景色。", "New frames use this background color."),
-            help = text("只影响之后新建的 Frame；已有 Frame 可在选中后的工具条中改色。", "Only affects new frames; select an existing frame to recolor it.")
-        )
-        ColorChoiceRow(
-            listOf(
-                text("白", "White") to 0xffffffff.toInt(),
-                text("浅灰", "Light gray") to 0xfff4f5f7.toInt(),
-                text("浅蓝", "Light blue") to 0xffeaf2ff.toInt(),
-                text("浅绿", "Light green") to 0xffe9f8ef.toInt(),
-                text("浅黄", "Light yellow") to 0xfffff8e3.toInt(),
-                text("浅紫", "Light purple") to 0xfff3efff.toInt()
-            ),
-            settings.frameColor
-        ) { onSettingsChange(settings.copy(frameColor = it)) }
     }
     SettingsDivider()
     SettingsGroup(text("笔记", "Notes")) {
@@ -930,20 +906,18 @@ private fun CanvasSettings(
             }
         }
         Spacer(Modifier.height(16.dp))
-        SettingsLabel(
+        CollapsibleColorSetting(
             text("笔记背景", "Note background"),
             text("新笔记使用此背景色。", "New notes use this background color."),
-            help = text("只影响之后新建的笔记；已有笔记可在画布工具条中改色。", "Only affects new notes; existing notes can be recolored from the canvas toolbar.")
-        )
-        ColorChoiceRow(
-            listOf(
+            help = text("只影响之后新建的笔记；已有笔记可在画布工具条中改色。", "Only affects new notes; existing notes can be recolored from the canvas toolbar."),
+            selected = settings.noteBackground,
+            options = listOf(
                 text("暖黄", "Warm yellow") to 0xfffff8e3.toInt(),
                 text("雾蓝", "Mist blue") to 0xffeef4ff.toInt(),
                 text("薄荷", "Mint") to 0xffeaf8f1.toInt(),
                 text("淡粉", "Rose") to 0xffffeef2.toInt(),
                 text("白", "White") to 0xffffffff.toInt()
-            ),
-            settings.noteBackground
+            )
         ) { onSettingsChange(settings.copy(noteBackground = it)) }
         Spacer(Modifier.height(10.dp))
         SettingsControlRow(
@@ -1005,21 +979,78 @@ private fun CanvasSettings(
         }
     }
     SettingsDivider()
+    SettingsGroup(text("文本", "Text")) {
+        CollapsibleColorSetting(
+            text("文本颜色", "Text color"),
+            text("新文本框使用此颜色。", "New text boxes use this color."),
+            help = text("只影响新文本框；已有文本可在选中后的工具条中改色。", "Only new text boxes; existing text can be recolored from its toolbar."),
+            selected = settings.defaultTextColor,
+            options = listOf(
+                text("墨黑", "Ink") to 0xff20293a.toInt(),
+                text("蓝", "Blue") to 0xff2563eb.toInt(),
+                text("红", "Red") to 0xffdc2626.toInt(),
+                text("绿", "Green") to 0xff15803d.toInt()
+            )
+        ) { onSettingsChange(settings.copy(defaultTextColor = it)) }
+        Spacer(Modifier.height(10.dp))
+        SettingsStackRow(
+            text("字体大小", "Font size"),
+            text("当前 ${settings.defaultTextSize.roundToInt()} px。", "Current ${settings.defaultTextSize.roundToInt()} px."),
+            help = text("只影响新文本框，不改变已有文本和文档字号。", "Only new text boxes; existing text and document font size are unchanged.")
+        ) {
+            CompactSlider(
+                value = settings.defaultTextSize,
+                onValueChange = { onSettingsChange(settings.copy(defaultTextSize = it).normalized()) },
+                valueRange = 12f..32f,
+                steps = 19
+            )
+        }
+        SettingsControlRow(
+            text("对齐方式", "Alignment"),
+            text("新文本框的文字对齐方式。", "Text alignment for new text boxes."),
+            help = text("只影响新文本框；已有文本可在工具条中调整。", "Only new text boxes; existing text can be adjusted in its toolbar.")
+        ) {
+            SegmentedChoice(
+                listOf(
+                    "left" to text("左侧", "Left"),
+                    "center" to text("居中", "Center"),
+                    "right" to text("右侧", "Right")
+                ),
+                settings.defaultTextAlign
+            ) { onSettingsChange(settings.copy(defaultTextAlign = it).normalized()) }
+        }
+    }
+    SettingsDivider()
     SettingsGroup(text("图形", "Shapes")) {
-        SettingsLabel(
+        CollapsibleColorSetting(
             text("新图形填充色", "New shape fill"),
             text("矩形、圆形等新建图形使用此颜色。", "Used when inserting new rectangles and ellipses."),
-            help = text("只影响新图形；选中已有图形后可在画布工具条中单独改色。", "Only affects new shapes; select an existing shape to recolor it from the canvas toolbar.")
-        )
-        ColorChoiceRow(
-            listOf(
+            help = text("只影响新图形；选中已有图形后可在画布工具条中单独改色。", "Only affects new shapes; select an existing shape to recolor it from the canvas toolbar."),
+            selected = settings.shapeColor,
+            options = listOf(
                 text("黄", "Yellow") to 0xffffd866.toInt(),
                 text("蓝", "Blue") to 0xff8ab4f8.toInt(),
                 text("绿", "Green") to 0xff9de2c2.toInt(),
                 text("紫", "Purple") to 0xffc7bdf8.toInt()
-            ),
-            settings.shapeColor
+            )
         ) { onSettingsChange(settings.copy(shapeColor = it)) }
+    }
+    SettingsDivider()
+    SettingsGroup(text("框架", "Frame")) {
+        CollapsibleColorSetting(
+            text("背景", "Background"),
+            text("新建 Frame 使用此背景色。", "New frames use this background color."),
+            help = text("只影响之后新建的 Frame；已有 Frame 可在选中后的工具条中改色。", "Only affects new frames; select an existing frame to recolor it."),
+            selected = settings.frameColor,
+            options = listOf(
+                text("白", "White") to 0xffffffff.toInt(),
+                text("浅灰", "Light gray") to 0xfff4f5f7.toInt(),
+                text("浅蓝", "Light blue") to 0xffeaf2ff.toInt(),
+                text("浅绿", "Light green") to 0xffe9f8ef.toInt(),
+                text("浅黄", "Light yellow") to 0xfffff8e3.toInt(),
+                text("浅紫", "Light purple") to 0xfff3efff.toInt()
+            )
+        ) { onSettingsChange(settings.copy(frameColor = it)) }
     }
     SettingsDivider()
     SettingsGroup(text("网格与吸附", "Grid and snapping")) {
@@ -1088,64 +1119,18 @@ private fun CanvasSettings(
             help = text("仅影响绘制外观，不修改连线路径数据；适合草图和白板记录。", "Visual only; connector path data is unchanged. Suits sketches and whiteboard notes.")
         ) { onSettingsChange(settings.copy(roughConnectors = it)) }
         Spacer(Modifier.height(14.dp))
-        SettingsLabel(
+        CollapsibleColorSetting(
             text("连线颜色", "Connector color"),
             text("新连线会使用当前颜色。", "New connectors use this color."),
-            help = text("默认颜色只用于新连线；已有连线可在选中后的参数条中改色。", "The default color applies to new connectors; existing ones can be recolored in their toolbar.")
-        )
-        ColorChoiceRow(
-            listOf(
+            help = text("默认颜色只用于新连线；已有连线可在选中后的参数条中改色。", "The default color applies to new connectors; existing ones can be recolored in their toolbar."),
+            selected = settings.connectorColor,
+            options = listOf(
                 text("灰", "Gray") to 0xff62748a.toInt(),
                 text("蓝", "Blue") to 0xff2563eb.toInt(),
                 text("紫", "Purple") to 0xff6255d9.toInt(),
                 text("绿", "Green") to 0xff15803d.toInt()
-            ),
-            settings.connectorColor
-        ) { onSettingsChange(settings.copy(connectorColor = it)) }
-    }
-    SettingsDivider()
-    SettingsGroup(text("文本默认样式", "Text defaults")) {
-        SettingsLabel(
-            text("默认文字颜色", "Default text color"),
-            text("新文本框使用此颜色。", "New text boxes use this color."),
-            help = text("只影响新文本框；已有文本可在选中后的工具条中改色。", "Only new text boxes; existing text can be recolored from its toolbar.")
-        )
-        ColorChoiceRow(
-            listOf(
-                text("墨黑", "Ink") to 0xff20293a.toInt(),
-                text("蓝", "Blue") to 0xff2563eb.toInt(),
-                text("红", "Red") to 0xffdc2626.toInt(),
-                text("绿", "Green") to 0xff15803d.toInt()
-            ),
-            settings.defaultTextColor
-        ) { onSettingsChange(settings.copy(defaultTextColor = it)) }
-        Spacer(Modifier.height(10.dp))
-        SettingsStackRow(
-            text("默认字号", "Default text size"),
-            text("当前 ${settings.defaultTextSize.roundToInt()} px。", "Current ${settings.defaultTextSize.roundToInt()} px."),
-            help = text("只影响新文本框，不改变已有文本和文档字号。", "Only new text boxes; existing text and document font size are unchanged.")
-        ) {
-            CompactSlider(
-                value = settings.defaultTextSize,
-                onValueChange = { onSettingsChange(settings.copy(defaultTextSize = it).normalized()) },
-                valueRange = 12f..32f,
-                steps = 19
             )
-        }
-        SettingsControlRow(
-            text("默认对齐", "Default alignment"),
-            text("新文本框的文字对齐方式。", "Text alignment for new text boxes."),
-            help = text("只影响新文本框；已有文本可在工具条中调整。", "Only new text boxes; existing text can be adjusted in its toolbar.")
-        ) {
-            SegmentedChoice(
-                listOf(
-                    "left" to text("左对齐", "Left"),
-                    "center" to text("居中", "Center"),
-                    "right" to text("右对齐", "Right")
-                ),
-                settings.defaultTextAlign
-            ) { onSettingsChange(settings.copy(defaultTextAlign = it).normalized()) }
-        }
+        ) { onSettingsChange(settings.copy(connectorColor = it)) }
     }
     SettingsDivider()
     SettingsGroup(text("笔", "Pen")) {
@@ -1163,19 +1148,17 @@ private fun CanvasSettings(
             penOnly,
             help = text("适合掌托防误触；关闭后手指也可以绘制。", "Useful for palm rejection; turn off to draw with a finger.")
         ) { onPenOnlyChange(it) }
-        SettingsLabel(
+        CollapsibleColorSetting(
             text("画笔颜色", "Brush color"),
             text("新建笔迹使用此颜色。", "New ink strokes use this color."),
-            help = text("只影响新笔迹；已有笔迹需要在画布中选中后改色。", "Only affects new ink; select existing strokes to recolor them.")
-        )
-        ColorChoiceRow(
-            listOf(
+            help = text("只影响新笔迹；已有笔迹需要在画布中选中后改色。", "Only affects new ink; select existing strokes to recolor them."),
+            selected = inkColor,
+            options = listOf(
                 text("墨黑", "Ink") to 0xff27374b.toInt(),
                 text("蓝", "Blue") to 0xff2563eb.toInt(),
                 text("红", "Red") to 0xffdc2626.toInt(),
                 text("绿", "Green") to 0xff15803d.toInt()
-            ),
-            inkColor
+            )
         ) { onInkColorChange(it) }
     }
 }
@@ -1722,7 +1705,7 @@ private fun <T> SettingsDropdown(
         ) {
             Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(current, Modifier.weight(1f), fontSize = 12.5.sp, color = LingyeColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("⌄", color = LingyeColors.Muted, fontSize = 12.sp)
+                DropdownChevron()
             }
         }
         DropdownMenu(
@@ -1740,6 +1723,31 @@ private fun <T> SettingsDropdown(
 }
 
 @Composable
+private fun DropdownChevron(expanded: Boolean = false) {
+    Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(12.dp)) {
+            val stroke = 1.8.dp.toPx()
+            val outerY = size.height * if (expanded) 0.62f else 0.38f
+            val centerY = size.height * if (expanded) 0.34f else 0.66f
+            drawLine(
+                LingyeColors.Muted,
+                Offset(size.width * 0.18f, outerY),
+                Offset(size.width * 0.5f, centerY),
+                stroke,
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                LingyeColors.Muted,
+                Offset(size.width * 0.5f, centerY),
+                Offset(size.width * 0.82f, outerY),
+                stroke,
+                cap = StrokeCap.Round
+            )
+        }
+    }
+}
+
+@Composable
 private fun ColorChoiceRow(options: List<Pair<String, Int>>, selected: Int, onSelected: (Int) -> Unit) {
     ColorPaletteRow(
         selected = selected,
@@ -1747,6 +1755,56 @@ private fun ColorChoiceRow(options: List<Pair<String, Int>>, selected: Int, onSe
         modifier = Modifier.fillMaxWidth(),
         leading = options.map { it.second to it.first }
     )
+}
+
+@Composable
+private fun CollapsibleColorSetting(
+    title: String,
+    description: String,
+    help: String,
+    selected: Int,
+    options: List<Pair<String, Int>>,
+    onSelected: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val currentLabel = options.firstOrNull { it.second == selected }?.first.orEmpty()
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, fontWeight = FontWeight.Medium, color = LingyeColors.Ink)
+                    Spacer(Modifier.width(6.dp))
+                    SettingsHelp(help)
+                }
+                Text(description, color = LingyeColors.Muted, fontSize = 12.sp)
+            }
+            Spacer(Modifier.width(12.dp))
+            Box(
+                Modifier.size(16.dp)
+                    .clip(CircleShape)
+                    .background(Color(selected))
+                    .border(1.dp, LingyeColors.Line, CircleShape)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(currentLabel, color = LingyeColors.Ink, fontSize = 12.5.sp, maxLines = 1)
+            Spacer(Modifier.width(8.dp))
+            DropdownChevron(expanded)
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                ColorChoiceRow(options, selected, onSelected)
+            }
+        }
+    }
 }
 
 @Composable
