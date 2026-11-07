@@ -4,7 +4,7 @@ package com.example.tabletworkspace
 import com.example.tabletworkspace.data.images.ImageCacheStats
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -325,11 +325,14 @@ private fun SettingsNavGroupLabel(label: String) {
 
 @Composable
 private fun SettingsNavItem(label: String, icon: AppIcon, selected: Boolean, compact: Boolean = false, onClick: () -> Unit) {
-    val background by animateColorAsState(
-        if (selected) LingyeColors.NavSelected else Color.Transparent,
-        tween(160),
-        label = "settings-nav"
-    )
+    val backgroundAnim = remember { Animatable(if (selected) LingyeColors.NavSelected else Color.Transparent) }
+    LaunchedEffect(selected) {
+        if (selected) backgroundAnim.animateTo(LingyeColors.NavSelected, tween(160))
+        else backgroundAnim.snapTo(Color.Transparent)
+    }
+    // Clear the outgoing item in composition so two settings sections never show a
+    // selected background while the new one fades in.
+    val background = if (selected) backgroundAnim.value else Color.Transparent
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),

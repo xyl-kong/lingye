@@ -1418,3 +1418,9 @@
 - 复核 Template 复选框：切到 Journal 后显示新页面状态，返回原页仍勾选，无元数据清除。
 - 10× 慢放与快速切换验证；439 项测试 0 失败。
 - 发布：`lingye-v0.15-architecture-batch37-release-20261107.apk`（3,440,443 字节，SHA-256 `1BF58497F3E8AC1C3B9E4E31C105DC83EB2B37F4C417D94CBB23D6850550FCCE`）。
+
+### 2026-11-07 设置页分区选中态
+
+- `SettingsNavItem` 独立动画导致新旧分区灰底重叠；改为旧项立即透明、新项 160ms 淡入。
+- 10× 慢放验证“外观→编辑器”；439 项测试 0 失败。
+- 发布：`lingye-v0.15-architecture-batch38-release-20261107.apk`（3,440,443 字节，SHA-256 `17093EAA4BD66A21C9567614B407F1D6F3A700CF8063A2C3FFA2C497B79A2F47`）。
