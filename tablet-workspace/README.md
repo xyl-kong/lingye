@@ -57,7 +57,7 @@ keytool -genkeypair -keystore debug.keystore -storepass android -alias androidde
 
 Release 构建启用 R8（`isMinifyEnabled = true`）并使用 `app/proguard-rules.pro`；非混淆 release 曾在大型 `CanvasEditor` 方法上触发 ART `VerifyError`，R8 版本已通过模拟器启动与主要界面验证。
 
-最新发布：`releases/lingye-v0.15-architecture-batch35-release-20261106.apk`，3,440,443 字节，SHA-256 `65A7351DD68ECB5F506A926E9961848FAF1CA444A1907BFD031A4DC509DF24D8`。该版完善导入/导出：Obsidian 与 Bear 去掉“实验性”标注；HTML 导出把文档图片内嵌为 data URI；Markdown 导出/导入在同一设备上可往返已存在的图片引用；完整备份恢复会把画布“链接文档”卡片重映射到新页面 ID；设置页新增导入/导出能力说明。页面格式与备份格式仍为 25 / `lingye-backup-2`。
+最新发布：`releases/lingye-v0.15-architecture-batch36-release-20261107.apk`，3,440,443 字节，SHA-256 `2125919C77EFAC2A840F0CAEC2AEE7A010C96F2B8AD7BA80A48BA79CFA6AE730`。该版修复 UI 对齐与导航：Journal/模板复选框改用 Canvas 几何对勾，不再受字体度量影响；点击 Journal 直接创建或打开当天日记，不再跳转侧栏；侧栏选中背景改为“新选中淡入、旧选中立即清除”，避免两个导航项同时高亮。页面格式与备份格式仍为 25 / `lingye-backup-2`。
 
 当前 0.15 的上一轮性能基线为：Pixel Tablet API 35 冷启动首帧约 1.58 秒；文档/白板切换、画布拖动、概览和页面列表连续交互采样为 776 帧、9 个卡顿帧（1.16%），95% 的帧在 26 ms 内完成。新增文档块、Markdown 围栏、斜杠菜单和块拖拽后仍需重新跑完整性能基线。详细环境和限制见 `docs/audits/2026-10-30-interaction-performance.md`。
 
@@ -66,7 +66,7 @@ Release 构建启用 R8（`isMinifyEnabled = true`）并使用 `app/proguard-rul
 ## 仓库
 
 - GitHub: https://github.com/xyl-kong/lingye
-- 页面格式 25；当前发布版见 `releases/lingye-v0.15-architecture-batch35-release-20261106.apk`。
+- 页面格式 25；当前发布版见 `releases/lingye-v0.15-architecture-batch36-release-20261107.apk`。
 - 开发全流程、主要问题与限制：`docs/affine-audit/DEVELOPMENT_SUMMARY_20261104.md`。
 - UI 设计逐轮修改记录：`docs/affine-audit/UI_DESIGN_ITERATIONS.md`。
 - 问题频率、根源与复发风险可视化：`docs/affine-audit/problem-navigation.html`。

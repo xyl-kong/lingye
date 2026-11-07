@@ -214,11 +214,14 @@ private fun SidebarNavigationRow(    icon: AppIcon,
     iconSize: Dp = 21.dp,
     trailing: @Composable RowScope.() -> Unit = {}
 ) {
-    val background by animateColorAsState(
-        targetValue = if (selected) LingyeColors.Subtle else Color.Transparent,
-        animationSpec = tween(150),
-        label = "sidebar-row-background"
-    )
+    val backgroundAnim = remember { Animatable(if (selected) LingyeColors.Subtle else Color.Transparent) }
+    LaunchedEffect(selected) {
+        if (selected) backgroundAnim.animateTo(LingyeColors.Subtle, tween(150))
+        else backgroundAnim.snapTo(Color.Transparent)
+    }
+    // Paint the outgoing row as transparent in this composition, before its effect runs;
+    // this guarantees two navigation rows never show a selection background together.
+    val background = if (selected) backgroundAnim.value else Color.Transparent
     Surface(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -2083,16 +2086,9 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                                         metadataRepository.setJournalDate(current.id, date)
                                         metaRevision++
                                         journalSelectedDate = date
-                                        journalMode = true
-                                        templateMode = false
-                                        favoriteMode = false
-                                        trashMode = false
-                                        allDocsHome = true
-                                        overview = false
-                                        settingsPage = false
-                                        canvas = false
                                     }
                                 },
+                                onOpenJournal = ::createJournalFor,
                                 templatePage = templatePageIds.contains(current.id),
                                 onTemplateChange = { value ->
                                     metadataRepository.setTemplate(current.id, value)

@@ -2,6 +2,7 @@
 import com.example.tabletworkspace.core.formatDocTime
 import com.example.tabletworkspace.core.journalDateLabel
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.text.PlatformTextStyle
@@ -50,6 +55,7 @@ internal fun DocumentInfoCard(
     onEditIcon: () -> Unit,
     journalDate: String?,
     onJournalDateChange: (String?) -> Unit,
+    onOpenJournal: (String) -> Unit,
     templatePage: Boolean,
     onTemplateChange: (Boolean) -> Unit
 ) {
@@ -92,7 +98,7 @@ internal fun DocumentInfoCard(
                 DocInfoControlRow(AppIcon.RECORD, "Journal") {
                     val context = LocalContext.current
                     if (journalDate == null) {
-                        InfoCheckBox(checked = false) { onJournalDateChange(java.time.LocalDate.now().toString()) }
+                        InfoCheckBox(checked = false) { onOpenJournal(java.time.LocalDate.now().toString()) }
                     } else {
                         val parsed = runCatching { java.time.LocalDate.parse(journalDate) }.getOrNull()
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -337,7 +343,33 @@ private fun InfoEditableCheckbox(checked: Boolean, onCheckedChange: (Boolean) ->
             .clickable { onCheckedChange(!checked) },
         contentAlignment = Alignment.Center
     ) {
-        if (checked) Text("✓", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        if (checked) CheckGlyph(Modifier.size(11.dp))
+    }
+}
+
+/**
+ * Check mark drawn from geometry instead of a font glyph, so its bounding box is centered in
+ * the parent box regardless of font metrics, density or text scaling.
+ */
+@Composable
+private fun CheckGlyph(modifier: Modifier = Modifier, color: Color = Color.White) {
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val path = Path().apply {
+            moveTo(w * 0.16f, h * 0.52f)
+            lineTo(w * 0.40f, h * 0.76f)
+            lineTo(w * 0.84f, h * 0.24f)
+        }
+        drawPath(
+            path = path,
+            color = color,
+            style = Stroke(
+                width = w * 0.16f,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
     }
 }
 
@@ -425,11 +457,6 @@ private fun InfoCheckBox(checked: Boolean = false, onClick: () -> Unit = {}) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        if (checked) {
-            Text(
-                "✓", color = Color.White, fontSize = 11.sp,
-                style = LocalTextStyle.current.copy(platformStyle = PlatformTextStyle(includeFontPadding = false))
-            )
-        }
+        if (checked) CheckGlyph(Modifier.size(11.dp))
     }
 }

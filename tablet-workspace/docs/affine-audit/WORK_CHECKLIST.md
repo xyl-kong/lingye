@@ -1402,3 +1402,12 @@
 - 数据：201 页面文件、20 历史、2 图片、All Docs 192、`ToolbarTest` 1,937 字节、格式 25；未增删页面。
 - 发布：`lingye-v0.15-architecture-batch35-release-20261106.apk`（3,440,443 字节，SHA-256 `65A7351DD68ECB5F506A926E9961848FAF1CA444A1907BFD031A4DC509DF24D8`）。
 - 说明文档：`ARCHITECTURE_AUDIT_20261103.md`、`DATA_SAFETY_INDEX.md`、`README.md`。
+
+### 2026-11-07 复选框对齐、Journal 行为与侧栏选中态
+
+- 复选框对勾从字体 `✓` 改为 Canvas 几何路径，640dp 与 200% 字体下均居中。
+- 信息面板 Journal 点击改为直接创建/打开当天日记；已有则只打开，不跳转侧栏、不重复创建；日期修改不导航。
+- 侧栏选中背景改为旧项立即透明、新项 150ms 淡入，避免两项同时高亮；10× 慢放验证。
+- 439 项 JVM 测试 0 失败；隔离 AVD 验证首次创建、重复打开、已有日记、返回文档；原验证工作区 192 文档未变。
+- 发布：`lingye-v0.15-architecture-batch36-release-20261107.apk`（3,440,443 字节，SHA-256 `2125919C77EFAC2A840F0CAEC2AEE7A010C96F2B8AD7BA80A48BA79CFA6AE730`）。
+- 说明文档：`ARCHITECTURE_AUDIT_20261103.md`、`DATA_SAFETY_INDEX.md`。

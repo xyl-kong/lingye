@@ -10,7 +10,7 @@
 
 > 当前为 **0.15 开发版**，页面格式 **25**。开发版不应作为唯一资料存储，升级/卸载前请先导出备份。
 >
-> **下载**：[最新 Release](https://github.com/xyl-kong/lingye/releases/latest) · [直接下载 batch35 APK](https://github.com/xyl-kong/lingye/releases/download/v0.15-batch35/lingye-v0.15-architecture-batch35-release-20261106.apk)
+> **下载**：[最新 Release](https://github.com/xyl-kong/lingye/releases/latest) · [直接下载 batch36 APK](https://github.com/xyl-kong/lingye/releases/download/v0.15-batch36/lingye-v0.15-architecture-batch36-release-20261107.apk)
 
 ## 项目状态
 
@@ -107,10 +107,10 @@
 
 ## 安装
 
-1. 打开 [Releases](https://github.com/xyl-kong/lingye/releases/latest) 页面，下载最新的 `lingye-v0.15-...-release-*.apk`（当前为 [v0.15-batch35](https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch35)）。
+1. 打开 [Releases](https://github.com/xyl-kong/lingye/releases/latest) 页面，下载最新的 `lingye-v0.15-...-release-*.apk`（当前为 [v0.15-batch36](https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch36)）。
 2. 在平板的“设置 → 应用 → 特殊应用权限 → 安装未知应用”中，允许浏览器或文件管理器安装 APK。
 3. 打开下载的 APK 完成安装。首次启动会创建本地工作区，不需要账号或网络。
-4. 可选校验：`SHA-256` 应与 Release 说明一致。当前版本为 `65A7351DD68ECB5F506A926E9961848FAF1CA444A1907BFD031A4DC509DF24D8`。
+4. 可选校验：`SHA-256` 应与 Release 说明一致。当前版本为 `2125919C77EFAC2A840F0CAEC2AEE7A010C96F2B8AD7BA80A48BA79CFA6AE730`。
 
 > 开发版可能与旧版本数据不兼容：升级前请先在“设置 → 储存/备份”导出备份；不要把它作为唯一资料存储。
 
@@ -136,11 +136,11 @@ Release 启用 R8（`app/proguard-rules.pro`）。调试签名可用项目根目
 
 ## 当前发布
 
-- Release 页面：https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch35
-- 文件：`tablet-workspace/releases/lingye-v0.15-architecture-batch35-release-20261106.apk`
-- 直接下载：https://github.com/xyl-kong/lingye/releases/download/v0.15-batch35/lingye-v0.15-architecture-batch35-release-20261106.apk
+- Release 页面：https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch36
+- 文件：`tablet-workspace/releases/lingye-v0.15-architecture-batch36-release-20261107.apk`
+- 直接下载：https://github.com/xyl-kong/lingye/releases/download/v0.15-batch36/lingye-v0.15-architecture-batch36-release-20261107.apk
 - 大小：3,440,443 字节
-- SHA-256：`65A7351DD68ECB5F506A926E9961848FAF1CA444A1907BFD031A4DC509DF24D8`
+- SHA-256：`2125919C77EFAC2A840F0CAEC2AEE7A010C96F2B8AD7BA80A48BA79CFA6AE730`
 
 历史版本的哈希保留在审计文档中；仓库只保留最新 APK。
 
