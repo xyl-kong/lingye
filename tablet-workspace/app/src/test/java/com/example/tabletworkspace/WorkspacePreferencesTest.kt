@@ -6,12 +6,46 @@ import org.junit.Test
 
 class WorkspacePreferencesTest {
     @Test
-    fun autoDateNamingUsesIsoDate() {
+    fun autoDateNamingUsesOfficialDefaultFormat() {
         val settings = WorkspaceSettings(autoDateTitle = true)
 
         assertEquals(
-            "2026-10-30",
+            "30-10-2026",
             newPageTitle(AppLanguage.ZH, settings, LocalDate.of(2026, 10, 30))
+        )
+    }
+
+    @Test
+    fun autoDateNamingUsesSupportedOfficialFormats() {
+        val date = LocalDate.of(2026, 10, 30)
+
+        assertEquals(
+            "10-30-2026",
+            newPageTitle(AppLanguage.ZH, WorkspaceSettings(autoDateTitle = true, dateTitleFormat = "monthDayYear"), date)
+        )
+        assertEquals(
+            "2026-10-30",
+            newPageTitle(AppLanguage.ZH, WorkspaceSettings(autoDateTitle = true, dateTitleFormat = "yearMonthDay"), date)
+        )
+        assertEquals(
+            "Oct 30, 2026",
+            newPageTitle(AppLanguage.EN, WorkspaceSettings(autoDateTitle = true, dateTitleFormat = "journal"), date)
+        )
+    }
+
+    @Test
+    fun autoDateNamingAddsDuplicateSuffix() {
+        val date = LocalDate.of(2026, 10, 30)
+        val settings = WorkspaceSettings(autoDateTitle = true)
+
+        assertEquals(
+            "30-10-2026(4)",
+            newPageTitle(
+                AppLanguage.ZH,
+                settings,
+                date,
+                listOf("30-10-2026", "30-10-2026(2)", "30-10-2026(3)", "Other")
+            )
         )
     }
 

@@ -644,7 +644,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
     }
     fun createPageFromShortcut(whiteboard: Boolean) {
         if (!saveCurrent()) return
-        val page = Page.create(newPageTitle(language, workspaceSettings))
+        val page = Page.create(newPageTitle(language, workspaceSettings, existingTitles = pages.map { it.title }))
         try {
             repository.save(page)
             pages.add(page)
@@ -1008,7 +1008,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
     }
     fun createPageInFolder(name: String) {
         if (!saveCurrent()) return
-        val page = Page.create(newPageTitle(language, workspaceSettings))
+        val page = Page.create(newPageTitle(language, workspaceSettings, existingTitles = pages.map { it.title }))
         page.folders.add(name)
         try {
             repository.save(page)
@@ -1379,7 +1379,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                     LingyeDropdownMenu(expanded = rootCreateMenu, onDismissRequest = { rootCreateMenu = false }, offset = DpOffset(10.dp, 6.dp), shape = RoundedCornerShape(12.dp), containerColor = LingyeColors.SurfaceHigh, tonalElevation = 0.dp, shadowElevation = 6.dp, border = BorderStroke(1.dp, LingyeColors.Line)) {
                         MenuRow(text("新建文档","New document"), {
                             rootCreateMenu = false
-                            if (saveCurrent()) { val page = Page.create(newPageTitle(language, workspaceSettings)); try { repository.save(page); pages.add(page); selected = page; folderFilter = null; trashMode = false; favoriteMode = false; journalMode = false; templateMode = false; allDocsHome = false; canvas = workspaceSettings.defaultPageMode == DefaultPageMode.WHITEBOARD; overview = false; settingsPage = false; revision++; savedRevision = revision } catch (e: Exception) { error = failure("创建失败","Create failed",e) } }
+                            if (saveCurrent()) { val page = Page.create(newPageTitle(language, workspaceSettings, existingTitles = pages.map { it.title })); try { repository.save(page); pages.add(page); selected = page; folderFilter = null; trashMode = false; favoriteMode = false; journalMode = false; templateMode = false; allDocsHome = false; canvas = workspaceSettings.defaultPageMode == DefaultPageMode.WHITEBOARD; overview = false; settingsPage = false; revision++; savedRevision = revision } catch (e: Exception) { error = failure("创建失败","Create failed",e) } }
                         }, icon = AppIcon.DOCUMENT)
                         MenuRow(text("新建文件夹","New folder"), { rootCreateMenu = false; folderName = ""; folderError = null; createFolder = true }, icon = AppIcon.FOLDER, enabled = foldersAvailable)
                     }
@@ -1997,7 +1997,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                     onToggleFavorite = ::togglePageFavorite,
                     onCreatePage = { whiteboard ->
                         if (saveCurrent()) {
-                            val page = Page.create(newPageTitle(language, workspaceSettings))
+                            val page = Page.create(newPageTitle(language, workspaceSettings, existingTitles = pages.map { it.title }))
                             if (favoriteMode) page.favorite = true
                             try {
                                 repository.save(page)
@@ -2025,7 +2025,10 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                 )
             } else if (current == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(text("创建一个页面，开始记录想法","Create a page to start capturing ideas"), color = LingyeColors.Muted) }
             else if (!canvas) {
-                val editorFont = editorFontFamilyOf(workspaceSettings.editorFontFamily)
+                val editorFont = editorFontFamilyOf(workspaceSettings.editorFontFamily, workspaceSettings.customFontFamily)
+                val effectiveFullWidth = remember(current.id, pageSidebarRevision, workspaceSettings.documentFullWidth) {
+                    metadataRepository.pageWidth(current.id) ?: workspaceSettings.documentFullWidth
+                }
                 val updatedMillis = modifiedTimes[current.id] ?: 0L
                 val createdMillis = remember(current.id, updatedMillis) {
                     store.pageCreatedAt(current.id, updatedMillis.takeIf { it > 0L } ?: System.currentTimeMillis())
@@ -2044,25 +2047,27 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                         picker.launch(arrayOf("image/*", "application/octet-stream"))
                     },
                     modifier = Modifier.fillMaxHeight()
-                        .then(if (workspaceSettings.documentFullWidth) Modifier.fillMaxWidth() else Modifier.widthIn(max = 860.dp).fillMaxWidth())
+                        .then(if (effectiveFullWidth) Modifier.fillMaxWidth() else Modifier.widthIn(max = 860.dp).fillMaxWidth())
                         .padding(horizontal = 32.dp, vertical = 24.dp),
                     header = {
                         Column(Modifier.padding(start = 72.dp)) {
-                            Row(
-                                Modifier.clickable { iconTargetId = current.id }.padding(bottom = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (current.icon.isBlank()) {
-                                    WorkspaceIcon(AppIcon.ADD, null, Modifier.size(16.dp), LingyeColors.Muted)
-                                } else {
-                                    PageGlyph(current, 18.dp)
+                            if (current.icon.isNotBlank() || workspaceSettings.displayAddIcon) {
+                                Row(
+                                    Modifier.clickable { iconTargetId = current.id }.padding(bottom = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (current.icon.isBlank()) {
+                                        WorkspaceIcon(AppIcon.ADD, null, Modifier.size(16.dp), LingyeColors.Muted)
+                                    } else {
+                                        PageGlyph(current, 18.dp)
+                                    }
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text(if (current.icon.isBlank()) "添加图标" else "更改图标", if (current.icon.isBlank()) "Add icon" else "Change icon"),
+                                        fontSize = 12.sp,
+                                        color = LingyeColors.Muted
+                                    )
                                 }
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text(if (current.icon.isBlank()) "添加图标" else "更改图标", if (current.icon.isBlank()) "Add icon" else "Change icon"),
-                                    fontSize = 12.sp,
-                                    color = LingyeColors.Muted
-                                )
                             }
                             BasicTextField(value = current.title, onValueChange = { current.title = it; changeGrouped("page-title:${current.id}") }, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).semantics { contentDescription = text("标题","Title") }, singleLine = true, textStyle = LocalTextStyle.current.copy(fontSize = (workspaceSettings.editorFontSize + 14).sp, fontWeight = FontWeight.Bold, fontFamily = editorFont, color = LingyeColors.Ink), cursorBrush = SolidColor(LingyeColors.Primary), decorationBox = { inner -> Box { if (current.title.isEmpty()) Text(text("未命名页面","Untitled page"), color = LingyeColors.Muted, fontSize = (workspaceSettings.editorFontSize + 14).sp, fontFamily = editorFont); inner() } })
                             DocumentInfoCard(
@@ -2077,8 +2082,11 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                                 updatedMillis = updatedMillis,
                                 canvasMode = canvas,
                                 onCanvasModeChange = { canvas = it; overview = false; allDocsHome = false },
-                                fullWidth = workspaceSettings.documentFullWidth,
-                                onFullWidthChange = { updateWorkspaceSettings(workspaceSettings.copy(documentFullWidth = it)) },
+                                fullWidth = effectiveFullWidth,
+                                onFullWidthChange = { full ->
+                                    metadataRepository.setPageWidth(current.id, full)
+                                    pageSidebarRevision++
+                                },
                                 canvasTheme = workspaceSettings.canvasTheme,
                                 onCanvasThemeChange = { updateWorkspaceSettings(workspaceSettings.copy(canvasTheme = it)) },
                                 onAddProperty = { pageSidebarOpen = true },
@@ -2130,7 +2138,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                             }
                         }
                     },
-                    footer = { DocumentLinksPanel(current, pages, language) },
+                    footer = { if (workspaceSettings.displayBiDirectionalLink) DocumentLinksPanel(current, pages, language) },
                 )
                 }
             } else CanvasEditor(current, store, pages, workspaceTemplates, sharedBlocks, templatesAvailable, ::replaceTemplates, revision + renderRevision, language, workspaceSettings, canvasFocusMode, { canvasFocusMode = it }, ::beginGesture, ::commitGesture, ::cancelGesture, tool, { tool = it }, penOnly, { penOnly = it; workspaceRepository.savePenOnly(it) }, eraserArea, { eraserArea = it; workspaceRepository.saveEraserArea(it) }, brushKind, { brushKind = it; workspaceRepository.saveBrushKind(it) }, highlighterColor, { highlighterColor = it; workspaceRepository.saveHighlighterColor(it) }, highlighterWidth, { highlighterWidth = it; workspaceRepository.saveHighlighterWidth(it) }, inkColor, { inkColor = it; workspaceRepository.saveInkColor(it) }, inkWidth, { inkWidth = it; workspaceRepository.saveInkWidth(it) }, ::updateWorkspaceSettings, ::change, ::changeGrouped, ::redraw, { imageTarget = current; imageForCanvas = true; picker.launch(arrayOf("image/*", "application/octet-stream")) }, { applyHistory(history?.undo()) }, { applyHistory(history?.redo()) }, { if (!returnToOriginPage()) canvas = false }, { id -> openLinkedPage(id) }, restoredSession.canvasScale, restoredSession.canvasOffsetX, restoredSession.canvasOffsetY, restoredSession.selectedObjectIds, { scale, offsetX, offsetY -> sessionCanvasScale=scale;sessionCanvasOffsetX=offsetX;sessionCanvasOffsetY=offsetY }, { ids -> sessionSelectedObjectIds=ids }, showFrameNavigator = frameNavigatorRequest, onFrameNavigatorShown = { frameNavigatorRequest = false })

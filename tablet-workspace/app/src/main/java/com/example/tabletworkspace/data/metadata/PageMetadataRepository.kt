@@ -7,7 +7,7 @@ import com.example.tabletworkspace.Page
 
 /**
  * Single entry point for page metadata kept outside the format-25 page file:
- * document properties, Journal dates and template flags.
+ * document properties, Journal dates, template flags and per-page widths.
  */
 class PageMetadataRepository(context: Context) {
     private val prefs = context.getSharedPreferences("ink_preferences", Context.MODE_PRIVATE)
@@ -27,6 +27,10 @@ class PageMetadataRepository(context: Context) {
 
     fun setTemplate(pageId: String, value: Boolean) = store.setTemplate(pageId, value)
 
+    fun pageWidth(pageId: String): Boolean? = store.pageWidth(pageId)
+
+    fun setPageWidth(pageId: String, fullWidth: Boolean?) = store.setPageWidth(pageId, fullWidth)
+
     fun journalDates(pages: List<Page>): Map<String, String?> =
         pages.associate { page -> page.id to store.journalDate(page.id) }
 
@@ -36,7 +40,8 @@ class PageMetadataRepository(context: Context) {
     fun snapshot(pages: List<Page>): PageMetadataSnapshot = PageMetadataSnapshot(
         docProperties = pages.mapNotNull { page -> DocPropertyStore.raw(prefs, page.id)?.let { page.id to it } }.toMap(),
         journalDates = pages.mapNotNull { page -> store.journalDate(page.id)?.let { page.id to it } }.toMap(),
-        templatePageIds = pages.filter { store.isTemplate(it.id) }.map { it.id }.toSet()
+        templatePageIds = pages.filter { store.isTemplate(it.id) }.map { it.id }.toSet(),
+        pageWidths = pages.mapNotNull { page -> store.pageWidth(page.id)?.let { page.id to it } }.toMap()
     )
 
     /**
@@ -50,8 +55,8 @@ class PageMetadataRepository(context: Context) {
             DocPropertyStore.putAll(editor, mapped.properties)
             check(editor.commit()) { "恢复文档属性失败" }
         }
-        if (mapped.journal.isNotEmpty() || mapped.templates.isNotEmpty()) {
-            check(store.writeBatch(mapped.journal, mapped.templates)) { "恢复页面标记失败" }
+        if (mapped.journal.isNotEmpty() || mapped.templates.isNotEmpty() || mapped.widths.isNotEmpty()) {
+            check(store.writeBatch(mapped.journal, mapped.templates, mapped.widths)) { "恢复页面标记失败" }
         }
     }
 }
@@ -60,7 +65,8 @@ class PageMetadataRepository(context: Context) {
 internal data class RestoredMetadataMap(
     val properties: Map<String, String>,
     val journal: Map<String, String?>,
-    val templates: Map<String, Boolean>
+    val templates: Map<String, Boolean>,
+    val widths: Map<String, Boolean?>
 )
 
 internal fun PageMetadataSnapshot.remapToImported(original: List<Page>, imported: List<Page>): RestoredMetadataMap {
@@ -68,6 +74,7 @@ internal fun PageMetadataSnapshot.remapToImported(original: List<Page>, imported
     return RestoredMetadataMap(
         properties = docProperties.mapNotNull { (oldId, raw) -> idMap[oldId]?.let { it to raw } }.toMap(),
         journal = journalDates.mapNotNull { (oldId, date) -> idMap[oldId]?.let { it to date } }.toMap(),
-        templates = templatePageIds.mapNotNull { idMap[it] }.associateWith { true }
+        templates = templatePageIds.mapNotNull { idMap[it] }.associateWith { true },
+        widths = pageWidths.mapNotNull { (oldId, fullWidth) -> idMap[oldId]?.let { it to fullWidth } }.toMap()
     )
 }

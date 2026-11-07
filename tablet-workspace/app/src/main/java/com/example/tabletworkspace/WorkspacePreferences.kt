@@ -16,12 +16,15 @@ data class WorkspaceSettings(
     val themeMode: String = "system",
     val defaultPageMode: DefaultPageMode = DefaultPageMode.DOCUMENT,
     val autoDateTitle: Boolean = false,
-    val dateTitleFormat: String = "iso",
-    val codeBlockLineNumbers: Boolean = false,
+    val dateTitleFormat: String = "dayMonthYear",
+    val codeBlockLineNumbers: Boolean = true,
     val documentFullWidth: Boolean = false,
     val displayDocInfo: Boolean = true,
+    val displayAddIcon: Boolean = true,
+    val displayBiDirectionalLink: Boolean = true,
     val editorFontSize: Float = 16f,
     val editorFontFamily: String = "sans",
+    val customFontFamily: String = "",
     val smoothImages: Boolean = true,
     val motionEnabled: Boolean = true,
     val showGrid: Boolean = true,
@@ -71,7 +74,8 @@ data class WorkspaceSettings(
         themeMode = themeMode.takeIf { it in THEME_MODES } ?: "system",
         editorFontSize = editorFontSize.coerceIn(12f, 24f),
         editorFontFamily = editorFontFamily.takeIf { it in EDITOR_FONT_FAMILIES } ?: "sans",
-        dateTitleFormat = dateTitleFormat.takeIf { it in DATE_TITLE_FORMATS } ?: "iso",
+        customFontFamily = customFontFamily.trim().take(80),
+        dateTitleFormat = dateTitleFormat.takeIf { it in DATE_TITLE_FORMATS } ?: "dayMonthYear",
         gridSize = gridSize.takeIf { it in GRID_SIZES } ?: "medium",
         canvasTheme = canvasTheme.takeIf { it in CANVAS_THEMES } ?: "light",
         defaultTextSize = defaultTextSize.coerceIn(12f, 32f),
@@ -91,9 +95,12 @@ data class WorkspaceSettings(
         val THEME_MODES = setOf("system", "light", "dark")
         val CONNECTOR_PATH_STYLES = setOf("straight", "curve", "step")
         val CONNECTOR_END_MARKERS = setOf("dot", "arrow", "none")
-        val EDITOR_FONT_FAMILIES = setOf("sans", "serif", "mono")
+        val EDITOR_FONT_FAMILIES = setOf("sans", "serif", "mono", "custom")
         val GRID_SIZES = setOf("small", "medium", "large")
-        val DATE_TITLE_FORMATS = setOf("iso", "slash", "monthDay", "chinese")
+        val DATE_TITLE_FORMATS = setOf(
+            "dayMonthYear", "monthDayYear", "yearMonthDay", "journal",
+            "iso", "slash", "monthDay", "chinese"
+        )
         val CANVAS_THEMES = setOf("auto", "light", "dark")
         val TEXT_ALIGNS = setOf("left", "center", "right")
         val NOTE_CORNERS = setOf("none", "small", "medium", "large", "huge")
@@ -101,33 +108,69 @@ data class WorkspaceSettings(
     }
 }
 
-fun newPageTitle(language: AppLanguage, settings: WorkspaceSettings, date: LocalDate = LocalDate.now()): String =
-    if (settings.autoDateTitle) formatDateTitle(settings.dateTitleFormat, date) else tr(language, "未命名页面", "Untitled page")
+fun newPageTitle(
+    language: AppLanguage,
+    settings: WorkspaceSettings,
+    date: LocalDate = LocalDate.now(),
+    existingTitles: Iterable<String> = emptyList()
+): String {
+    if (!settings.autoDateTitle) return tr(language, "未命名页面", "Untitled page")
+    val base = formatDateTitle(settings.dateTitleFormat, date, language)
+    val titles = existingTitles.toSet()
+    if (base !in titles) return base
+    var duplicate = 2
+    while ("$base($duplicate)" in titles) duplicate++
+    return "$base($duplicate)"
+}
 
-fun formatDateTitle(format: String, date: LocalDate): String = when (format) {
+fun formatDateTitle(format: String, date: LocalDate, language: AppLanguage = AppLanguage.ZH): String = when (format) {
+    "dayMonthYear" -> String.format("%02d-%02d-%04d", date.dayOfMonth, date.monthValue, date.year)
+    "monthDayYear" -> String.format("%02d-%02d-%04d", date.monthValue, date.dayOfMonth, date.year)
+    "yearMonthDay" -> date.toString()
+    "journal" -> if (language == AppLanguage.EN) {
+        date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy", java.util.Locale.ENGLISH))
+    } else {
+        date.format(java.time.format.DateTimeFormatter.ofPattern("yyyy年M月d日", java.util.Locale.CHINA))
+    }
     "slash" -> String.format("%04d/%02d/%02d", date.year, date.monthValue, date.dayOfMonth)
     "monthDay" -> String.format("%02d-%02d", date.monthValue, date.dayOfMonth)
     "chinese" -> "${date.monthValue}月${date.dayOfMonth}日"
     else -> date.toString()
 }
 
-fun editorFontFamilyOf(family: String): FontFamily = when (family) {
-    "serif" -> FontFamily.Serif
-    "mono" -> FontFamily.Monospace
-    else -> FontFamily.SansSerif
+/** Old releases stored project-specific format ids; map them onto the official four. */
+fun migrateDateTitleFormat(value: String): String = when (value) {
+    "iso", "slash" -> "yearMonthDay"
+    "monthDay" -> "dayMonthYear"
+    "chinese" -> "journal"
+    else -> value
 }
+
+fun editorFontFamilyOf(family: String, customFontFamily: String = ""): FontFamily {
+    if (family == "custom") return SystemFontCatalog.fontFamily(customFontFamily) ?: FontFamily.SansSerif
+    return when (family) {
+        "serif" -> FontFamily.Serif
+        "mono" -> FontFamily.Monospace
+        else -> FontFamily.SansSerif
+    }
+}
+
+fun isCustomFontAvailable(name: String): Boolean = SystemFontCatalog.isAvailable(name)
 
 fun WorkspacePreferenceStore.readWorkspaceSettings(legacyMotionEnabled: Boolean? = null): WorkspaceSettings =
     WorkspaceSettings(
         themeMode = string(KEY_THEME_MODE, "system").orEmpty(),
         defaultPageMode = DefaultPageMode.fromStored(string(KEY_DEFAULT_PAGE_MODE, null)),
         autoDateTitle = boolean(KEY_AUTO_DATE_TITLE, false),
-        dateTitleFormat = string(KEY_DATE_TITLE_FORMAT, "iso").orEmpty(),
-        codeBlockLineNumbers = boolean(KEY_CODE_BLOCK_LINE_NUMBERS, false),
+        dateTitleFormat = migrateDateTitleFormat(string(KEY_DATE_TITLE_FORMAT, "dayMonthYear").orEmpty()),
+        codeBlockLineNumbers = boolean(KEY_CODE_BLOCK_LINE_NUMBERS, true),
         documentFullWidth = boolean(KEY_DOCUMENT_FULL_WIDTH, false),
         displayDocInfo = boolean(KEY_DISPLAY_DOC_INFO, true),
+        displayAddIcon = boolean(KEY_DISPLAY_ADD_ICON, true),
+        displayBiDirectionalLink = boolean(KEY_DISPLAY_BI_DIRECTIONAL_LINK, true),
         editorFontSize = float(KEY_EDITOR_FONT_SIZE, 16f),
         editorFontFamily = string(KEY_EDITOR_FONT_FAMILY, "sans").orEmpty(),
+        customFontFamily = string(KEY_CUSTOM_FONT_FAMILY, "").orEmpty(),
         smoothImages = boolean(KEY_SMOOTH_IMAGES, true),
         motionEnabled = boolean(KEY_MOTION_ENABLED, legacyMotionEnabled ?: true),
         showGrid = boolean(KEY_SHOW_GRID, true),
@@ -169,8 +212,11 @@ fun WorkspacePreferenceStore.writeWorkspaceSettings(settings: WorkspaceSettings)
         put.boolean(KEY_CODE_BLOCK_LINE_NUMBERS, value.codeBlockLineNumbers)
         put.boolean(KEY_DOCUMENT_FULL_WIDTH, value.documentFullWidth)
         put.boolean(KEY_DISPLAY_DOC_INFO, value.displayDocInfo)
+        put.boolean(KEY_DISPLAY_ADD_ICON, value.displayAddIcon)
+        put.boolean(KEY_DISPLAY_BI_DIRECTIONAL_LINK, value.displayBiDirectionalLink)
         put.float(KEY_EDITOR_FONT_SIZE, value.editorFontSize)
         put.string(KEY_EDITOR_FONT_FAMILY, value.editorFontFamily)
+        put.string(KEY_CUSTOM_FONT_FAMILY, value.customFontFamily)
         put.boolean(KEY_SMOOTH_IMAGES, value.smoothImages)
         put.boolean(KEY_MOTION_ENABLED, value.motionEnabled)
         put.boolean(KEY_SHOW_GRID, value.showGrid)
@@ -209,8 +255,11 @@ private const val KEY_DATE_TITLE_FORMAT = "date_title_format"
 private const val KEY_CODE_BLOCK_LINE_NUMBERS = "code_block_line_numbers"
 private const val KEY_DOCUMENT_FULL_WIDTH = "document_full_width"
 private const val KEY_DISPLAY_DOC_INFO = "display_doc_info"
+private const val KEY_DISPLAY_ADD_ICON = "display_add_icon_option"
+private const val KEY_DISPLAY_BI_DIRECTIONAL_LINK = "display_bi_directional_link"
 private const val KEY_EDITOR_FONT_SIZE = "editor_font_size"
 private const val KEY_EDITOR_FONT_FAMILY = "editor_font_family"
+private const val KEY_CUSTOM_FONT_FAMILY = "custom_font_family"
 private const val KEY_SMOOTH_IMAGES = "smooth_images"
 private const val KEY_MOTION_ENABLED = "motion_enabled"
 private const val KEY_SHOW_GRID = "show_grid"

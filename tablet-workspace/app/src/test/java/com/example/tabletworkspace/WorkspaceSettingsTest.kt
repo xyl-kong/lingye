@@ -19,10 +19,12 @@ class WorkspaceSettingsTest {
         assertTrue(settings.showLinkedDocs)
         assertTrue(settings.linkReturnToSource)
         assertFalse(settings.snapToGridDefault)
-        assertEquals("iso", settings.dateTitleFormat)
-        assertFalse(settings.codeBlockLineNumbers)
+        assertEquals("dayMonthYear", settings.dateTitleFormat)
+        assertTrue(settings.codeBlockLineNumbers)
         assertFalse(settings.documentFullWidth)
         assertTrue(settings.displayDocInfo)
+        assertTrue(settings.displayAddIcon)
+        assertTrue(settings.displayBiDirectionalLink)
     }
 
     @Test
@@ -63,11 +65,43 @@ class WorkspaceSettingsTest {
     fun dateTitleFormatsProduceTheExpectedPrefix() {
         val date = java.time.LocalDate.of(2026, 10, 31)
 
+        assertEquals("31-10-2026", formatDateTitle("dayMonthYear", date))
+        assertEquals("10-31-2026", formatDateTitle("monthDayYear", date))
+        assertEquals("2026-10-31", formatDateTitle("yearMonthDay", date))
+        assertEquals("2026年10月31日", formatDateTitle("journal", date, AppLanguage.ZH))
+        assertEquals("Oct 31, 2026", formatDateTitle("journal", date, AppLanguage.EN))
         assertEquals("2026-10-31", formatDateTitle("iso", date))
         assertEquals("2026/10/31", formatDateTitle("slash", date))
         assertEquals("10-31", formatDateTitle("monthDay", date))
         assertEquals("10月31日", formatDateTitle("chinese", date))
         assertEquals("2026-10-31", formatDateTitle("unknown", date))
+    }
+
+    @Test
+    fun legacyDateFormatsMigrateToOfficialFormats() {
+        assertEquals("yearMonthDay", migrateDateTitleFormat("iso"))
+        assertEquals("yearMonthDay", migrateDateTitleFormat("slash"))
+        assertEquals("dayMonthYear", migrateDateTitleFormat("monthDay"))
+        assertEquals("journal", migrateDateTitleFormat("chinese"))
+        assertEquals("monthDayYear", migrateDateTitleFormat("monthDayYear"))
+    }
+
+    @Test
+    fun customFontSelectionNormalizesNameAndLength() {
+        val settings = WorkspaceSettings(
+            editorFontFamily = "custom",
+            customFontFamily = "  Noto Serif CJK SC  "
+        ).normalized()
+
+        assertEquals("custom", settings.editorFontFamily)
+        assertEquals("Noto Serif CJK SC", settings.customFontFamily)
+        assertEquals(80, WorkspaceSettings(customFontFamily = "x".repeat(120)).normalized().customFontFamily.length)
+    }
+
+    @Test
+    fun unknownFontFamilyStillFallsBackToSans() {
+        assertEquals("sans", WorkspaceSettings(editorFontFamily = "comic").normalized().editorFontFamily)
+        assertEquals("custom", WorkspaceSettings(editorFontFamily = "custom").normalized().editorFontFamily)
     }
 
     @Test

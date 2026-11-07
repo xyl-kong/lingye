@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,6 +37,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -449,9 +453,13 @@ private fun EditorSettings(
 ) {
     fun text(zh: String, en: String) = tr(language, zh, en)
     var editorTab by remember { mutableStateOf("document") }
+    var fontPicker by remember { mutableStateOf(false) }
     SettingsHeading(
         text("编辑器设置", "Editor settings"),
-        text("文档与白板的默认值；修改只影响之后新建的内容。", "Defaults for documents and whiteboards; changes apply to new content.")
+        text(
+            "排版、默认页面宽度和显示选项会立即应用于当前文档；新页面选项只影响之后新建的内容。",
+            "Typography, default page width and display options apply immediately; new-page options only affect content created later."
+        )
     )
     SegmentedChoice(
         listOf("document" to text("文档", "Document"), "whiteboard" to text("白板", "Whiteboard")),
@@ -462,7 +470,7 @@ private fun EditorSettings(
         SettingsGroup(text("排版", "Typography")) {
             SettingsStackRow(
                 text("正文字号", "Base font size"),
-                text("应用于标题、正文和文本块。", "Applies to title, body and text blocks."),
+                text("立即应用于标题、正文和文本块。", "Applies immediately to title, body and text blocks."),
                 help = text("字号只影响文档阅读与编辑，不改变画布对象和已有图片。", "Font size only affects document reading and editing; canvas objects and images are unchanged.")
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -481,24 +489,80 @@ private fun EditorSettings(
             SettingsControlRow(
                 text("正文字体", "Body font"),
                 text("用于标题、正文和文本块。", "Used for title, body and text blocks."),
-                help = text("无衬线适合屏幕阅读，衬线适合长文，等宽适合代码和对齐；代码块始终使用等宽字体。", "Sans suits screen reading, serif suits long-form text, mono suits code and alignment. Code blocks always use mono.")
+                help = text("无衬线适合屏幕阅读，衬线适合长文，等宽适合代码和对齐；代码块始终使用等宽字体。", "Sans suits screen reading, serif suits long-form text, mono suits code and alignment. Code blocks always use mono."),
+                controlWidth = 280.dp
             ) {
                 SegmentedChoice(
                     listOf(
                         "sans" to text("无衬线", "Sans"),
                         "serif" to text("衬线", "Serif"),
-                        "mono" to text("等宽", "Mono")
+                        "mono" to text("等宽", "Mono"),
+                        "custom" to text("自定义", "Custom")
                     ),
                     settings.editorFontFamily
                 ) { onSettingsChange(settings.copy(editorFontFamily = it).normalized()) }
+            }
+            if (settings.editorFontFamily == "custom") {
+                Spacer(Modifier.height(8.dp))
+                val customAvailable = settings.customFontFamily.isNotBlank() && isCustomFontAvailable(settings.customFontFamily)
+                val customLabel = remember(settings.customFontFamily) {
+                    SystemFontCatalog.choices().firstOrNull {
+                        it.name.equals(settings.customFontFamily, ignoreCase = true) ||
+                            it.displayName.equals(settings.customFontFamily, ignoreCase = true)
+                    }?.displayName ?: settings.customFontFamily
+                }
+                SettingsStackRow(
+                    text("自定义字体", "Custom font"),
+                    text("从本机已安装字体中选择，或手动输入字体名称。", "Choose an installed font or enter a font name."),
+                    help = text(
+                        "自定义字体只用于文档标题、正文和文本块；工具栏、侧边栏和系统界面保持默认字体。字体不可用时自动回退为无衬线，不会出现空白文字。",
+                        "The custom font applies only to document titles, body text and text blocks. Toolbars, sidebars and system UI keep their fonts. If it is unavailable, text falls back to Sans instead of disappearing."
+                    )
+                ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            onClick = { fontPicker = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(9.dp),
+                            color = LingyeColors.SurfaceHigh,
+                            border = BorderStroke(1.dp, LingyeColors.Line)
+                        ) {
+                            Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        customLabel.ifBlank { text("选择字体", "Choose a font") },
+                                        fontSize = 12.5.sp,
+                                        color = LingyeColors.Ink,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (settings.customFontFamily.isNotBlank() && !customAvailable) {
+                                        Text(
+                                            text("当前不可用，已回退为无衬线", "Unavailable; falling back to Sans"),
+                                            fontSize = 11.sp,
+                                            color = LingyeColors.Muted
+                                        )
+                                    }
+                                }
+                                Text("⌄", color = LingyeColors.Muted, fontSize = 12.sp)
+                            }
+                        }
+                        if (settings.customFontFamily.isNotBlank()) {
+                            TextButton(
+                                onClick = { onSettingsChange(settings.copy(customFontFamily = "").normalized()) },
+                                colors = ButtonDefaults.textButtonColors(contentColor = LingyeColors.Ink)
+                            ) { Text(text("清除", "Clear"), fontSize = 12.sp) }
+                        }
+                    }
+                }
             }
         }
         SettingsDivider()
         SettingsGroup(text("页面", "Page")) {
             SettingsControlRow(
-                text("页面宽度", "Page width"),
+                text("默认页面宽度", "Default page width"),
                 text("标准居中阅读，全宽铺满。", "Standard centers the page; full width fills the editor."),
-                help = text("只影响文档阅读宽度，不改变页面内容和画布。", "Only affects document reading width; page content and canvas are unchanged.")
+                help = text("未单独设置宽度的页面使用此值；在页面信息中可只调整当前页。", "Pages without their own width use this value; page info can override it for the current page.")
             ) {
                 SegmentedChoice(
                     listOf(false to text("标准", "Standard"), true to text("全宽", "Full width")),
@@ -512,6 +576,12 @@ private fun EditorSettings(
                 settings.displayDocInfo,
                 help = text("关闭后仍可通过页面选项菜单查看信息。", "When off, page info remains available from the page options menu.")
             ) { onSettingsChange(settings.copy(displayDocInfo = it)) }
+            SettingsToggleRow(
+                text("显示双向链接", "Show bi-directional links"),
+                text("在文档底部显示引用当前页面的链接。", "Show links that reference this document below the body."),
+                settings.displayBiDirectionalLink,
+                help = text("只影响文档底部面板的显示，不删除也不修改任何链接。", "Only affects the panel below the document; no links are deleted or changed.")
+            ) { onSettingsChange(settings.copy(displayBiDirectionalLink = it)) }
             SettingsToggleRow(
                 text("代码块行号", "Code block line numbers"),
                 text("代码块左侧显示行号。", "Show line numbers beside code blocks."),
@@ -551,14 +621,21 @@ private fun EditorSettings(
                     DateFormatChoice(
                         settings.dateTitleFormat,
                         listOf(
-                            "iso" to "2026-10-31",
-                            "slash" to "2026/10/31",
-                            "monthDay" to "10-31",
-                            "chinese" to "10月31日"
+                            "dayMonthYear" to "31-10-2026",
+                            "monthDayYear" to "10-31-2026",
+                            "yearMonthDay" to "2026-10-31",
+                            "journal" to text("2026年10月31日", "Oct 31, 2026")
                         )
                     ) { onSettingsChange(settings.copy(dateTitleFormat = it).normalized()) }
                 }
             }
+            Spacer(Modifier.height(8.dp))
+            SettingsToggleRow(
+                text("显示添加图标选项", "Show add icon option"),
+                text("无图标的页面在顶栏显示添加入口。", "Show an add-icon entry for pages without an icon."),
+                settings.displayAddIcon,
+                help = text("只影响无图标页面的添加按钮；已有图标仍会显示。", "Only affects pages without an icon; existing icons stay visible.")
+            ) { onSettingsChange(settings.copy(displayAddIcon = it)) }
         }
     } else {
         CanvasSettings(
@@ -566,6 +643,147 @@ private fun EditorSettings(
             penOnly, onPenOnlyChange, inkColor, onInkColorChange, inkWidth, onInkWidthChange
         )
     }
+    if (fontPicker) {
+        FontPickerDialog(
+            language = language,
+            current = settings.customFontFamily,
+            onDismiss = { fontPicker = false },
+            onPick = { name ->
+                onSettingsChange(settings.copy(editorFontFamily = "custom", customFontFamily = name).normalized())
+                fontPicker = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun FontPickerDialog(
+    language: AppLanguage,
+    current: String,
+    onDismiss: () -> Unit,
+    onPick: (String) -> Unit
+) {
+    fun text(zh: String, en: String) = tr(language, zh, en)
+    var query by remember { mutableStateOf("") }
+    var manual by remember { mutableStateOf(current) }
+    var refreshKey by remember { mutableStateOf(0) }
+    val choices = remember(refreshKey) { SystemFontCatalog.choices(refresh = refreshKey > 0) }
+    val filtered = remember(query, choices) {
+        if (query.isBlank()) choices else choices.filter {
+            it.name.contains(query, ignoreCase = true) || it.displayName.contains(query, ignoreCase = true)
+        }
+    }
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = LingyeColors.Ink,
+        unfocusedTextColor = LingyeColors.Ink,
+        focusedBorderColor = LingyeColors.Ink,
+        unfocusedBorderColor = LingyeColors.Line,
+        focusedLabelColor = LingyeColors.Ink,
+        unfocusedLabelColor = LingyeColors.Muted,
+        cursorColor = LingyeColors.Ink
+    )
+    val buttonColors = ButtonDefaults.textButtonColors(
+        contentColor = LingyeColors.Ink,
+        disabledContentColor = LingyeColors.Muted
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(18.dp),
+        containerColor = LingyeColors.SurfaceHigh,
+        titleContentColor = LingyeColors.Ink,
+        textContentColor = LingyeColors.Ink,
+        title = { Text(text("选择字体", "Choose a font"), fontWeight = FontWeight.SemiBold) },
+        text = {
+            Column(Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it.take(60) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(text("搜索字体", "Search fonts"), fontSize = 12.sp) },
+                    colors = fieldColors
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text(
+                        "只列出本机已安装字体，不下载任何字体文件。",
+                        "Lists fonts already installed on this device; nothing is downloaded."
+                    ),
+                    color = LingyeColors.Muted,
+                    fontSize = 11.sp
+                )
+                if (SystemFontCatalog.limitedEnumeration) {
+                    Text(
+                        text(
+                            "当前系统只能按字体文件名枚举，可手动输入字体族名称。",
+                            "This Android version lists font file names only; enter a family name manually if needed."
+                        ),
+                        color = LingyeColors.Muted,
+                        fontSize = 11.sp
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                if (filtered.isEmpty()) {
+                    Text(
+                        text("未找到匹配字体，可在下方手动输入名称。", "No matching fonts; enter a name below."),
+                        color = LingyeColors.Muted,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                } else {
+                    Column(Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
+                        filtered.forEach { choice ->
+                            val selected = choice.name.equals(current, ignoreCase = true)
+                            val preview = remember(choice.name, refreshKey) {
+                                SystemFontCatalog.fontFamily(choice.name) ?: FontFamily.SansSerif
+                            }
+                            Surface(
+                                onClick = { onPick(choice.name) },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                                shape = RoundedCornerShape(9.dp),
+                                color = if (selected) LingyeColors.SegmentSelected else Color.Transparent
+                            ) {
+                                Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        choice.displayName,
+                                        Modifier.weight(1f),
+                                        fontFamily = preview,
+                                        fontSize = 14.sp,
+                                        color = LingyeColors.Ink,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (selected) Text(text("当前", "Current"), fontSize = 11.sp, color = LingyeColors.Muted)
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = manual,
+                    onValueChange = { manual = it.take(80) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(text("字体名称", "Font name"), fontSize = 12.sp) },
+                    colors = fieldColors
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = manual.isNotBlank(),
+                colors = buttonColors,
+                onClick = { onPick(manual.trim()) }
+            ) { Text(text("使用", "Use")) }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { refreshKey++ }, colors = buttonColors) { Text(text("刷新", "Refresh")) }
+                TextButton(onClick = onDismiss, colors = buttonColors) { Text(text("取消", "Cancel")) }
+            }
+        }
+    )
 }
 
 @Composable
