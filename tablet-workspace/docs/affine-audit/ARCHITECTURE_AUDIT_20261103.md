@@ -446,6 +446,15 @@
 - 设备验证：隔离 AVD 上首次点 Journal 创建 `Nov 7, 2026` 并打开，重复点击只打开不重复创建；验证 AVD 上已有当天日记时直接打开；从 Journal 打开 `AlphaRenamed` 正常；侧栏收起时点击 Journal 后仍保持收起；10× 动画慢放下切换 `All documents`↔`Journals`，稳定后仅一行有选中背景；侧栏列表首项位置在 Journal 打开前后不变。验证后删除测试 AVD，原验证工作区仍为 192 文档。
 - 发布：`releases/lingye-v0.15-architecture-batch36-release-20261107.apk`，3,440,443 字节，SHA-256 `2125919C77EFAC2A840F0CAEC2AEE7A010C96F2B8AD7BA80A48BA79CFA6AE730`。
 
+## 4.35 第三十七批：父级导航选中态与文档选中动画分离
+
+- 复现“模板勾选被取消”：Template 复选框是**当前页面**的元数据（`templatePageIds.contains(current.id)`），点击 Journal 会打开当天日记页，信息面板随之显示新页面，因此看起来未勾选。实际元数据未被清除：返回原 `ToolbarTest` 后模板仍为勾选。未发现任何 Journal 路径写 `setTemplate(..., false)`；本批不改变这一页级语义。
+- 修复“全部文档重复跳动”：`SidebarNavigationRow` 增加 `animateSelection` 参数。`全部文档` 传 `false`，当文档导航使父级选中时直接绘制 `Subtle` 灰底；其它导航项仍保留 150ms 淡入。文档行自身的选中动画不变，父级与子级选中互不共享动画。
+- 未选中导航行仍在组合阶段直接绘制透明，避免旧选中背景与新选中背景同时出现。
+- 设备验证：10× 动画慢放下 `Journals → 点击文档`，第一帧 `全部文档` 即为稳定灰底，文档行单独执行选中反馈；`模板` 勾选后经 Journal 切换并返回原页仍保持勾选；重复点击当前文档无额外跳动；快速切换 Journals/文档/模板状态互斥。439 项 JVM 测试 0 失败。
+- 数据：原验证工作区仍为 192 文档；测试期间勾选的模板已恢复取消；未增删页面。
+- 发布：`releases/lingye-v0.15-architecture-batch37-release-20261107.apk`，3,440,443 字节，SHA-256 `1BF58497F3E8AC1C3B9E4E31C105DC83EB2B37F4C417D94CBB23D6850550FCCE`。
+
 ## 5. 目标架构
 
 建议按职责收敛为以下包/模块（当前先保持单模块，后续可迁移）：

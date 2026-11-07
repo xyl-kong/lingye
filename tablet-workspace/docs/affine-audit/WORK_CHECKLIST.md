@@ -1411,3 +1411,10 @@
 - 439 项 JVM 测试 0 失败；隔离 AVD 验证首次创建、重复打开、已有日记、返回文档；原验证工作区 192 文档未变。
 - 发布：`lingye-v0.15-architecture-batch36-release-20261107.apk`（3,440,443 字节，SHA-256 `2125919C77EFAC2A840F0CAEC2AEE7A010C96F2B8AD7BA80A48BA79CFA6AE730`）。
 - 说明文档：`ARCHITECTURE_AUDIT_20261103.md`、`DATA_SAFETY_INDEX.md`。
+
+### 2026-11-07 父级导航选中态与文档选中动画分离
+
+- `全部文档` 导航恢复选中时直接显示灰底，不再播放 150ms 入场动画；文档行保留自身选中反馈。
+- 复核 Template 复选框：切到 Journal 后显示新页面状态，返回原页仍勾选，无元数据清除。
+- 10× 慢放与快速切换验证；439 项测试 0 失败。
+- 发布：`lingye-v0.15-architecture-batch37-release-20261107.apk`（3,440,443 字节，SHA-256 `1BF58497F3E8AC1C3B9E4E31C105DC83EB2B37F4C417D94CBB23D6850550FCCE`）。

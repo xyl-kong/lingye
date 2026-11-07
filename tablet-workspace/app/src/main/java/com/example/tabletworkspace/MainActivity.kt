@@ -212,16 +212,26 @@ private fun SidebarNavigationRow(    icon: AppIcon,
     modifier: Modifier = Modifier,
     startPadding: Dp = 10.dp,
     iconSize: Dp = 21.dp,
+    animateSelection: Boolean = true,
     trailing: @Composable RowScope.() -> Unit = {}
 ) {
     val backgroundAnim = remember { Animatable(if (selected) LingyeColors.Subtle else Color.Transparent) }
-    LaunchedEffect(selected) {
-        if (selected) backgroundAnim.animateTo(LingyeColors.Subtle, tween(150))
-        else backgroundAnim.snapTo(Color.Transparent)
+    LaunchedEffect(selected, animateSelection) {
+        when {
+            !selected -> backgroundAnim.snapTo(Color.Transparent)
+            animateSelection -> backgroundAnim.animateTo(LingyeColors.Subtle, tween(150))
+            else -> backgroundAnim.snapTo(LingyeColors.Subtle)
+        }
     }
     // Paint the outgoing row as transparent in this composition, before its effect runs;
     // this guarantees two navigation rows never show a selection background together.
-    val background = if (selected) backgroundAnim.value else Color.Transparent
+    // Programmatic selection (e.g. "All documents" restored by opening a page) is painted
+    // immediately and never replays the interactive fade.
+    val background = when {
+        !selected -> Color.Transparent
+        animateSelection -> backgroundAnim.value
+        else -> LingyeColors.Subtle
+    }
     Surface(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -1386,7 +1396,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                     allDocsHome = true
                     overview = false
                     settingsPage = false
-                })
+                }, animateSelection = false)
                 SidebarNavigationRow(AppIcon.FAVORITE, text("收藏","Favorites"), favoriteMode, {
                     folderFilter = null
                     trashMode = false
