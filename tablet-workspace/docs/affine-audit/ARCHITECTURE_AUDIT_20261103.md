@@ -443,7 +443,7 @@
 - **Journal 点击**：信息面板的 Journal 复选框原先调用 `onJournalDateChange(today)`，把当前页标记为 Journal 后设置 `journalMode=true`、`allDocsHome=true`，于是跳到 Journals 列表。现新增 `onOpenJournal` 回调，直接调用 `createJournalFor(today)`：当天已有日记则打开，没有则创建；不改变 `journalMode/allDocsHome`，不滚动或定位侧栏。日期选择器修改日期只在当前页写元数据，不再跳转。
 - **侧栏选中态**：`SidebarNavigationRow` 原先每行独立 `animateColorAsState(tween(150))`；路由切换时旧行淡出、新行淡入，两个灰色背景会重叠约一帧到 150 ms。动态切换 `animationSpec` 不能中止已在运行的动画。现改为 `Animatable`：未选中行在组合阶段直接绘制透明，选中行从透明淡入；任意时刻最多一行有选中背景。
 - 439 项 JVM 测试 0 失败（本批为 UI/交互修复，无新增测试）。
-- 设备验证：隔离 AVD 上首次点 Journal 创建 `Nov 7, 2026` 并打开，重复点击只打开不重复创建；验证 AVD 上已有当天日记时直接打开；从 Journal 打开 `AlphaRenamed` 正常；10× 动画慢放下切换 `All documents`↔`Journals`，稳定后仅一行有选中背景；侧栏列表首项位置在 Journal 打开前后不变。验证后删除测试 AVD，原验证工作区仍为 192 文档。
+- 设备验证：隔离 AVD 上首次点 Journal 创建 `Nov 7, 2026` 并打开，重复点击只打开不重复创建；验证 AVD 上已有当天日记时直接打开；从 Journal 打开 `AlphaRenamed` 正常；侧栏收起时点击 Journal 后仍保持收起；10× 动画慢放下切换 `All documents`↔`Journals`，稳定后仅一行有选中背景；侧栏列表首项位置在 Journal 打开前后不变。验证后删除测试 AVD，原验证工作区仍为 192 文档。
 - 发布：`releases/lingye-v0.15-architecture-batch36-release-20261107.apk`，3,440,443 字节，SHA-256 `2125919C77EFAC2A840F0CAEC2AEE7A010C96F2B8AD7BA80A48BA79CFA6AE730`。
 
 ## 5. 目标架构
