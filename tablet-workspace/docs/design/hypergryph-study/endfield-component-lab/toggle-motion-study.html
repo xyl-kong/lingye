@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模块科技开关 · 动效对比</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, "Microsoft YaHei", sans-serif; color: #1d2220; background: #e5e6e3; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1120px; margin: 0 auto; padding: 44px 24px 72px; }
+    header { padding: 28px 32px; background: #1d2220; color: #f3f4ef; }
+    header small { color: #e8e936; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+    h1 { margin: 12px 0 8px; font-size: clamp(24px, 3vw, 34px); }
+    header p { max-width: 720px; margin: 0; color: #c6cbc7; line-height: 1.6; }
+    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 18px 0 20px; }
+    .controls button { border: 1px solid #b6bdb5; background: #f9faf7; border-radius: 8px; padding: 10px 16px; min-height: 44px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .controls button:hover { background: white; }
+    .controls button:focus-visible, .toggle:focus-visible { outline: 3px solid #4774d8; outline-offset: 3px; }
+    .controls label { display: inline-flex; gap: 8px; align-items: center; margin-left: auto; font-size: 14px; }
+    .controls input { width: 18px; height: 18px; accent-color: #59675f; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    article { background: #f8f9f6; border: 1px solid #c8cec7; min-height: 270px; padding: 22px 24px 20px; }
+    article .eyebrow { color: #66716a; font-size: 11px; font-weight: 800; letter-spacing: .09em; }
+    article h2 { font-size: 19px; margin: 7px 0 4px; }
+    article p { margin: 0; color: #637069; font-size: 13px; line-height: 1.55; }
+    .stage { height: 130px; display: grid; place-items: center; }
+    .toggle { position: relative; width: 252px; height: 60px; border: 2px solid #b9c0b8; border-radius: 30px; background: #eeeeee; padding: 0; cursor: pointer; overflow: hidden; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    .toggle .plate { position: absolute; top: 3px; left: 3px; width: calc(50% - 3px); height: 50px; border-radius: 25px; background: #d1d1d1; will-change: transform, width, opacity; }
+    .toggle[data-on="true"] .plate { transform: translateX(122px); background: #ebe936; }
+    .toggle .label { position: absolute; top: 0; width: 50%; height: 100%; display: grid; place-items: center; z-index: 2; font-size: 17px; font-weight: 800; color: #1d2220; pointer-events: none; }
+    .toggle .off { left: 0; }
+    .toggle .on { right: 0; }
+    .toggle[data-on="true"] .on { color: #fff; }
+    .toggle .dots { position: absolute; left: 18px; top: 12px; z-index: 1; width: 26px; height: 34px; display: grid; grid-template-columns: repeat(3, 6px); grid-template-rows: repeat(3, 6px); column-gap: 4px; row-gap: 8px; opacity: 0; pointer-events: none; }
+    .toggle .dots i { width: 6px; height: 6px; border-radius: 50%; background: #fffea8; opacity: var(--dot-opacity); }
+    .toggle .dots i:nth-child(3n + 1) { --dot-opacity: .2; }
+    .toggle .dots i:nth-child(3n + 2) { --dot-opacity: .3; }
+    .toggle .dots i:nth-child(3n) { --dot-opacity: .5; }
+    .toggle[data-on="true"] .dots { opacity: 1; transform: translateX(122px); }
+    .toggle[data-on="false"] .dots { transform: translateX(0); }
+    .toggle[data-variant="a"] .plate, .toggle[data-variant="a"] .dots { transition: transform 180ms cubic-bezier(.2,.72,.2,1), background-color 120ms linear, opacity 100ms linear; }
+    .toggle[data-variant="b"] .plate { transition: transform 220ms steps(4,end), background-color 80ms linear; }
+    .toggle[data-variant="b"] .dots { transition: transform 220ms steps(4,end), opacity 80ms linear; }
+    .toggle[data-variant="b"].moving .plate { animation: compress 220ms steps(4,end); }
+    @keyframes compress { 0% { scale: 1 1; } 18% { scale: .92 1; } 78% { scale: .92 1; } 100% { scale: 1 1; } }
+    .toggle[data-variant="c"] .plate { transition: transform 120ms cubic-bezier(.12,.8,.25,1), background-color 100ms linear; }
+    .toggle[data-variant="c"] .dots { transition: transform 120ms cubic-bezier(.12,.8,.25,1), opacity 80ms linear; }
+    .toggle[data-variant="c"].moving .dots i { animation: signal 240ms ease-out both; animation-delay: calc(var(--i) * 18ms); }
+    @keyframes signal { 0% { opacity: 0; scale: .5; } 60% { opacity: var(--dot-opacity); scale: 1.15; } 100% { opacity: var(--dot-opacity); scale: 1; } }
+    .toggle[data-variant="d"] .plate { transition: transform 210ms cubic-bezier(.25,.9,.25,1), background-color 120ms linear; }
+    .toggle[data-variant="d"] .dots { transition: transform 210ms cubic-bezier(.25,.9,.25,1), opacity 120ms linear; }
+    .toggle[data-variant="d"].moving .plate { animation: bridge 210ms ease-in-out; }
+    @keyframes bridge { 0%,100% { width: calc(50% - 3px); } 45% { width: 68%; } }
+    .toggle[data-variant="d"].moving .dots { opacity: 0; }
+    .toggle[data-variant="d"].moving[data-on="true"] .dots { animation: return-dots 210ms ease-out both; }
+    @keyframes return-dots { 0%,65% { opacity: 0; } 100% { opacity: 1; } }
+    .toggle[data-variant="e"] .plate { transition: transform 300ms cubic-bezier(.34,.06,.14,1), background-color 170ms ease-out; }
+    .toggle[data-variant="e"].moving .plate { animation: flowing-bridge 300ms cubic-bezier(.34,.06,.14,1) both; }
+    @keyframes flowing-bridge {
+      0%, 100% { width: calc(50% - 3px); border-radius: 25px; }
+      28% { width: 60%; border-radius: 28px 34px 34px 28px; }
+      64% { width: 55%; border-radius: 32px 28px 28px 32px; }
+    }
+    .toggle[data-variant="e"] .dots { transition: transform 300ms cubic-bezier(.34,.06,.14,1), opacity 80ms ease-out; }
+    .toggle[data-variant="e"][data-on="true"] .dots { transition: transform 300ms cubic-bezier(.34,.06,.14,1), opacity 70ms ease-out 105ms; }
+    .toggle[data-variant="e"].moving[data-on="true"] .dots i { animation: flowing-signal 200ms ease-out both; animation-delay: calc(105ms + var(--i) * 17ms); }
+    @keyframes flowing-signal { 0% { opacity: 0; scale: .7; } 70% { opacity: var(--dot-opacity); scale: 1.08; } 100% { opacity: var(--dot-opacity); scale: 1; } }
+    .spec { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid #d9ded8; font-size: 12px; color: #5b675f; }
+    .recommend { color: #1f3327; font-weight: 800; }
+    .note { padding-top: 20px; color: #5f6b63; font-size: 13px; line-height: 1.6; }
+    .reduce-motion .toggle *, .reduce-motion .toggle { animation: none !important; transition-duration: 0ms !important; }
+    @media (prefers-reduced-motion: reduce) { .toggle *, .toggle { animation: none !important; transition-duration: 0ms !important; } }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .controls label { margin-left: 0; width: 100%; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header><small>MOTION STUDY / TOGGLE D</small><h1>模块科技开关 · 动效实验</h1><p>读取了你在 Figma 修改的 OFF 与 ON 两种样式。五种方案只调整切换过程；E 将 C 的点阵反馈与 D 的桥接收合结合，并放软运动曲线。点击每个开关比较手感。</p></header>
+    <div class="controls"><button id="all">全部切换</button><button id="reset">重置 OFF</button><button id="replay">重播一次</button><label><input id="reduce" type="checkbox">关闭动效</label></div>
+    <div class="grid" id="grid"></div>
+    <div class="note">交互规则：点击后状态立即生效；连续点击会从当前视觉位置转向新状态，不排队、不闪烁。关闭动效或系统启用“减少动态效果”时直接切换。此页是独立动效实验，不会修改你在 Figma 中的原始组件。</div>
+  </main>
+  <script>
+    const variants = [
+      { id: 'a', title: 'A · 精准滑移', desc: '选中片直接平移，节奏干净；点阵随片移动。', meta: '180 ms · 快出慢停', tag: '建议先试' },
+      { id: 'b', title: 'B · 机械分档', desc: '短暂压缩后沿四段刻度位移，强调机械操作感。', meta: '220 ms · 4 档位移', tag: '触感较强' },
+      { id: 'c', title: 'C · 信号点亮', desc: '片快速到位，再按顺序点亮九个小信号点。', meta: '120 + 240 ms · 顺序反馈', tag: '信息感更强' },
+      { id: 'd', title: 'D · 桥接收合', desc: '选中片先短暂伸展，抵达目标后收合成原形。', meta: '210 ms · 结构过渡', tag: '表现力较强' },
+      { id: 'e', title: 'E · 柔流桥接 + 信号点亮', desc: '选中片柔和伸展、流向目标并收合；点阵随后按顺序亮起。', meta: '300 ms · 柔流桥接 / 105 ms 后点亮', tag: 'C + D 融合版' },
+    ];
+    const grid = document.getElementById('grid');
+    for (const v of variants) {
+      const article = document.createElement('article');
+      article.innerHTML = `<div class="eyebrow">EXPERIMENT / ${v.id.toUpperCase()}</div><h2>${v.title}</h2><p>${v.desc}</p><div class="stage"><button class="toggle" data-variant="${v.id}" data-on="false" type="button" role="switch" aria-checked="false" aria-label="${v.title}"><span class="plate"></span><span class="dots">${Array.from({length:9}, (_,i)=>`<i style="--i:${i}"></i>`).join('')}</span><span class="label off">OFF</span><span class="label on">ON</span></button></div><div class="spec"><span>${v.meta}</span><span class="recommend">${v.tag}</span></div>`;
+      grid.appendChild(article);
+    }
+    const toggles = [...document.querySelectorAll('.toggle')];
+    function setToggle(el, on) {
+      el.classList.remove('moving');
+      void el.offsetWidth;
+      el.dataset.on = String(on);
+      el.setAttribute('aria-checked', String(on));
+      el.classList.add('moving');
+      clearTimeout(el.motionTimer);
+      el.motionTimer = setTimeout(() => el.classList.remove('moving'), 500);
+    }
+    toggles.forEach(el => el.addEventListener('click', () => setToggle(el, el.dataset.on !== 'true')));
+    document.getElementById('all').addEventListener('click', () => toggles.forEach(el => setToggle(el, el.dataset.on !== 'true')));
+    document.getElementById('reset').addEventListener('click', () => toggles.forEach(el => setToggle(el, false)));
+    document.getElementById('replay').addEventListener('click', () => { toggles.forEach(el => setToggle(el, false)); setTimeout(() => toggles.forEach(el => setToggle(el, true)), 100); });
+    document.getElementById('reduce').addEventListener('change', e => document.body.classList.toggle('reduce-motion', e.target.checked));
+  </script>
+</body>
+</html>

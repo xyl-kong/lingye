@@ -48,8 +48,8 @@ data class TextRun(val start: Int, val end: Int, val flags: Int)
 data class TextLine(val start: Int, val end: Int)
 
 object TextFormatting {
-    val FONT_FAMILIES = setOf("sans", "serif", "mono")
-    val FONT_STYLES = setOf("normal", "italic")
+    val FONT_FAMILIES = EditorStyleCatalog.fontFamilies
+    val FONT_STYLES = EditorStyleCatalog.fontStyles
 
     fun validWeight(weight: Int): Boolean = weight in 100..900 && weight % 100 == 0
 

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasPageLinkToolbar(
     index: Int?,
@@ -89,6 +90,7 @@ internal fun CanvasPageLinkToolbar(
     }
 }
 
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasMindNodeToolbar(
     index: Int?,
@@ -155,6 +157,7 @@ internal fun CanvasMindNodeToolbar(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasFrameToolbar(
     index: Int?,
@@ -231,6 +234,7 @@ internal fun CanvasFrameToolbar(
     }
 }
 
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasImageToolbar(
     index: Int?,
@@ -298,6 +302,7 @@ internal fun CanvasImageToolbar(
     }
 }
 
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasStrokeToolbar(
     index: Int?,

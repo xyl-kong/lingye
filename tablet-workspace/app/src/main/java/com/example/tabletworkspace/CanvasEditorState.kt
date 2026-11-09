@@ -66,6 +66,7 @@ internal class CanvasEditorState(
     val textToolsMenu: MutableState<Boolean> = mutableStateOf(false)
     val pendingTextKind: MutableState<String> = mutableStateOf("body")
     val linkedDocPicker: MutableState<Boolean> = mutableStateOf(false)
+    val linkedDocConvertIndex: MutableState<Int?> = mutableStateOf(null)
     val mindmapToolsMenu: MutableState<Boolean> = mutableStateOf(false)
     val activeMenuButton: MutableState<String?> = mutableStateOf(null)
     val selectionLayerMenu: MutableState<Boolean> = mutableStateOf(false)

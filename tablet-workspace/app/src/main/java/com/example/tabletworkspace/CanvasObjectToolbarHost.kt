@@ -50,6 +50,7 @@ internal fun CanvasObjectToolbarHost(
     onPresentFrame: (Int) -> Unit,
     onCropImage: (String, Float, Float, Float, Float) -> Unit,
     onDrawConnector: (Int) -> Unit,
+    onConvertTextToLinkedDoc: (Int) -> Unit,
     hideKeyboard: () -> Unit,
     changedText: (String?) -> Unit
 ) {
@@ -164,7 +165,8 @@ internal fun CanvasObjectToolbarHost(
         objectKind = objectKind,
         onSelect = onSelect,
         onChanged = onChanged,
-        onDrawConnector = onDrawConnector
+        onDrawConnector = onDrawConnector,
+        onConvertToLinkedDoc = onConvertTextToLinkedDoc
     )
     val adjacentIndex = selectedTextIndex ?: selectedCardIndex
     val adjacentAnchor = remember(geometryRevision, adjacentIndex) {

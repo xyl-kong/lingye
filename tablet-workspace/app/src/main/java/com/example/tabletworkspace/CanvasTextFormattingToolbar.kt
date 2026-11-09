@@ -103,6 +103,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasTextFormattingToolbar(
     page: Page,
@@ -159,8 +160,7 @@ internal fun CanvasTextFormattingToolbar(
                 )
                 changedText("text-format:${current.id}")
             }
-            fun applyTextStyle(style: String) {
-                val current = page.shapes.getOrNull(editIndex) ?: return
+            fun applyTextStyle(style: String) {                val current = page.shapes.getOrNull(editIndex) ?: return
                 val (size, weight, family) = when (style) {
                     "h1" -> Triple(32f, 700, "sans")
                     "h2" -> Triple(28f, 700, "sans")
@@ -177,6 +177,42 @@ internal fun CanvasTextFormattingToolbar(
                 }
                 page.shapes[editIndex] = updated
                 onChanged()
+                textStyleMenu = false
+            }
+            fun applyListStyle(kind: String) {
+                val current = page.shapes.getOrNull(editIndex) ?: return
+                val body = TextBlockTransforms.applyList(current.body, kind)
+                var updated = current.copy(body = body)
+                if (textAutoHeight(updated)) {
+                    updated = updated.copy(height = autoFitTextHeight(body, updated.width, updated.fontSize))
+                }
+                page.shapes[editIndex] = updated
+                textEditValue = textEditValue?.copy(
+                    text = body,
+                    selection = androidx.compose.ui.text.TextRange(body.length)
+                )
+                changedText("text-list:${current.id}")
+                textStyleMenu = false
+            }
+            fun applyQuoteStyle() {
+                val current = page.shapes.getOrNull(editIndex) ?: return
+                val quoted = current.body.lines().filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }
+                    ?.all { it.trimStart().startsWith("> ") } == true
+                val body = TextBlockTransforms.applyQuote(current.body)
+                var updated = current.copy(
+                    body = body,
+                    fontFamily = "serif",
+                    fontStyle = if (quoted) "normal" else "italic"
+                )
+                if (textAutoHeight(updated)) {
+                    updated = updated.copy(height = autoFitTextHeight(body, updated.width, updated.fontSize))
+                }
+                page.shapes[editIndex] = updated
+                textEditValue = textEditValue?.copy(
+                    text = body,
+                    selection = androidx.compose.ui.text.TextRange(body.length)
+                )
+                changedText("text-quote:${current.id}")
                 textStyleMenu = false
             }
             fun applyColor(index: Int, foreground: Boolean) {
@@ -330,12 +366,12 @@ internal fun CanvasTextFormattingToolbar(
                             TextToolbarMenuItem(tr(language, "标题 4", "Heading 4"), InlineToolbarIcons.Heading4) { applyTextStyle("h4") }
                             TextToolbarMenuItem(tr(language, "标题 5", "Heading 5"), InlineToolbarIcons.Heading5) { applyTextStyle("h5") }
                             TextToolbarMenuItem(tr(language, "标题 6", "Heading 6"), InlineToolbarIcons.Heading6) { applyTextStyle("h6") }
-                            TextToolbarMenuItem(tr(language, "项目符号", "Bulleted List"), InlineToolbarIcons.BulletedList, enabled = false) {}
-                            TextToolbarMenuItem(tr(language, "编号列表", "Numbered List"), InlineToolbarIcons.NumberedList, enabled = false) {}
-                            TextToolbarMenuItem(tr(language, "待办列表", "To-do List"), InlineToolbarIcons.TodoList, enabled = false) {}
+                            TextToolbarMenuItem(tr(language, "项目符号", "Bulleted List"), InlineToolbarIcons.BulletedList) { applyListStyle("bulleted") }
+                            TextToolbarMenuItem(tr(language, "编号列表", "Numbered List"), InlineToolbarIcons.NumberedList) { applyListStyle("numbered") }
+                            TextToolbarMenuItem(tr(language, "待办列表", "To-do List"), InlineToolbarIcons.TodoList) { applyListStyle("todo") }
                             TextToolbarMenuItem(tr(language, "代码块", "Code Block"), InlineToolbarIcons.CodeBlock) { applyTextStyle("code") }
-                            TextToolbarMenuItem(tr(language, "公式", "Equation"), InlineToolbarIcons.EquationBlock, enabled = false) {}
-                            TextToolbarMenuItem(tr(language, "引用", "Quote"), InlineToolbarIcons.Quote, enabled = false) {}
+                            TextToolbarMenuItem(tr(language, "公式", "Equation"), InlineToolbarIcons.EquationBlock) { openEquationPopover() }
+                            TextToolbarMenuItem(tr(language, "引用", "Quote"), InlineToolbarIcons.Quote) { applyQuoteStyle() }
                         },
                         alignMenuExpanded = textAlignMenu,
                         onDismissAlignMenu = { textAlignMenu = false },

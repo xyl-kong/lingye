@@ -40,7 +40,7 @@ data class Shape(
     val borderStyle: String = "solid",
     val borderWidth: Float = 1f,
     val cornerRadius: Float = 12f,
-    val shadowStyle: String = "box",
+    val shadowStyle: String = "paper",
     val textColor: Int = 0xff20293a.toInt(),
     val locked: Boolean = false,
     val cardKind: String = "",
@@ -53,7 +53,8 @@ data class Shape(
 )
 data class CardTemplate(val name: String, val title: String, val body: String, val color: Int, val width: Float = 240f, val height: Float = 150f, val canvasData: String = "")
 data class Connector(val x1: Float, val y1: Float, val x2: Float, val y2: Float, val color: Int = 0xff62748a.toInt(), val width: Float = 2f, val startShape: String = "", val endShape: String = "", val startPort: String = "center", val endPort: String = "center", val animated: Boolean = false, val curved: Boolean = false, val id: String = UUID.randomUUID().toString(), val endMarker: String = "dot", val pathStyle: String = "curve", val startMarker: String = "none", val label: String = "")
-private val CONNECTOR_MARKERS = setOf("dot", "arrow", "triangle", "diamond", "none")
+private val CONNECTOR_MARKERS = EditorStyleCatalog.connectorMarkers
+internal val SHADOW_STYLES = EditorStyleCatalog.shadowStyles
 data class CanvasImage(val name: String, val x: Float, val y: Float, val width: Float, val height: Float, val id: String = UUID.randomUUID().toString(), val group: String = "", val rotation:Int=0, val flipX:Boolean=false, val flipY:Boolean=false, val cropLeft:Float=0f,val cropTop:Float=0f,val cropRight:Float=1f,val cropBottom:Float=1f)
 data class Viewport(val scale: Float, val offsetX: Float, val offsetY: Float) {
     fun toWorld(p: Point) = Point((p.x - offsetX) / scale, (p.y - offsetY) / scale)
@@ -135,8 +136,37 @@ class Page private constructor(val id: String, var title: String, var text: Stri
         blocks[index] = block.copy(type = type)
     }
     fun moveBlock(from: Int, to: Int) { require(from in blocks.indices && to in blocks.indices); if (from != to) blocks.add(to, blocks.removeAt(from)) }
-    fun addShape(type: String, x: Float, y: Float, width: Float, height: Float, color: Int = Shape(type, x, y, width, height).color) {
-        shapes.add(Shape(type, x, y, width, height, color))
+    fun addShape(
+        type: String,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        color: Int = Shape(type, x, y, width, height).color,
+        borderColor: Int = Shape(type, x, y, width, height).borderColor,
+        borderStyle: String = "solid",
+        borderWidth: Float = 1f,
+        textColor: Int = Shape(type, x, y, width, height).textColor,
+        fontSize: Float = 16f,
+        textAlign: String = "left",
+        fontFamily: String = "sans",
+        fontStyle: String = "normal",
+        fontWeight: Int = 400
+    ) {
+        shapes.add(
+            Shape(
+                type, x, y, width, height, color,
+                borderColor = borderColor,
+                borderStyle = borderStyle,
+                borderWidth = borderWidth,
+                textColor = textColor,
+                fontSize = fontSize,
+                textAlign = textAlign,
+                fontFamily = fontFamily,
+                fontStyle = fontStyle,
+                fontWeight = fontWeight
+            )
+        )
     }
     fun addConnector(
         x1: Float,
@@ -149,7 +179,7 @@ class Page private constructor(val id: String, var title: String, var text: Stri
         startMarker: String = "none",
         width: Float = 4f
     ) {
-        require(pathStyle in setOf("straight", "curve", "step"))
+        require(pathStyle in EditorStyleCatalog.connectorPathStyles)
         require(endMarker in CONNECTOR_MARKERS && startMarker in CONNECTOR_MARKERS)
         connectors.add(
             Connector(
@@ -171,11 +201,11 @@ class Page private constructor(val id: String, var title: String, var text: Stri
     fun encode(): ByteArray {
         val bytes = ByteArrayOutputStream()
         DataOutputStream(bytes).use { out ->
-            require(connectors.all { it.endMarker in CONNECTOR_MARKERS && it.startMarker in CONNECTOR_MARKERS && it.pathStyle in setOf("straight","curve","step") && it.label.length <= 200 }) { "连接线端点、路径或文字无效" }
+            require(connectors.all { it.endMarker in CONNECTOR_MARKERS && it.startMarker in CONNECTOR_MARKERS && it.pathStyle in EditorStyleCatalog.connectorPathStyles && it.label.length <= 200 }) { "连接线端点、路径或文字无效" }
             require(folders.size <= 1000 && folders.all(FolderCatalog::valid))
             require(tags.size <= 200 && tags.all(TagCatalog::valid))
             require(PageIcons.isValid(icon))
-            require(shapes.all { it.shadowStyle in setOf("none", "box", "sticker") }) { "笔记阴影样式无效" }
+            require(shapes.all { it.shadowStyle in SHADOW_STYLES }) { "笔记阴影样式无效" }
             out.writeInt(25); out.writeUTF(id); out.writeUTF(title)
             out.writeString(text)
             out.writeFloat(cardX); out.writeFloat(cardY); out.writeInt(strokes.size)
@@ -192,12 +222,12 @@ class Page private constructor(val id: String, var title: String, var text: Stri
             val layers=orderedLayerIds();out.writeInt(layers.size);layers.forEach(out::writeUTF)
             images.forEach { require(it.rotation in 0..3 && validImageCrop(it.cropLeft,it.cropTop,it.cropRight,it.cropBottom));out.writeInt(it.rotation);out.writeBoolean(it.flipX);out.writeBoolean(it.flipY);out.writeFloat(it.cropLeft);out.writeFloat(it.cropTop);out.writeFloat(it.cropRight);out.writeFloat(it.cropBottom) }
             shapes.forEach {
-                require(it.borderStyle in setOf("solid", "dashed", "none") && it.borderWidth in 0f..12f && it.cornerRadius in 0f..64f)
+                require(it.borderStyle in EditorStyleCatalog.borderStyles && it.borderWidth in 0f..12f && it.cornerRadius in 0f..64f)
                 out.writeInt(it.borderColor); out.writeUTF(it.borderStyle); out.writeFloat(it.borderWidth); out.writeFloat(it.cornerRadius); out.writeInt(it.textColor)
             }
             shapes.forEach { out.writeBoolean(it.locked) }
             shapes.forEach {
-                require(it.fontSize in 8f..96f && it.textAlign in setOf("left", "center", "right"))
+                require(it.fontSize in 8f..96f && it.textAlign in EditorStyleCatalog.textAligns)
                 out.writeUTF(it.cardKind); out.writeFloat(it.fontSize); out.writeUTF(it.textAlign)
             }
             out.writeInt(folders.size); folders.forEach(out::writeUTF)
@@ -244,14 +274,14 @@ class Page private constructor(val id: String, var title: String, var text: Stri
             if (version >= 8) { for (i in shapes.indices) shapes[i]=shapes[i].copy(title=input.readString(),body=input.readString()); for (i in connectors.indices) { val curved=input.readBoolean(); connectors[i]=connectors[i].copy(curved=curved,pathStyle=if(curved)"curve" else "straight") }; repeat(input.readCount(1000)) { templates.add(CardTemplate(input.readString(),input.readString(),input.readString(),input.readInt())) } }
             if (version >= 9) { for(i in connectors.indices) connectors[i]=connectors[i].copy(id=input.readUTF()); val ids=shapes.map { it.id }+images.map { it.id }+connectors.map { it.id }; require(ids.all { it.isNotEmpty() } && ids.distinct().size==ids.size) }
             if (version >= 10) { for (i in connectors.indices) { val marker=input.readUTF(); require(marker in CONNECTOR_MARKERS); connectors[i]=connectors[i].copy(endMarker=marker) } }
-            if (version >= 11) { for (i in connectors.indices) { val style=input.readUTF(); require(style in setOf("straight","curve","step")); connectors[i]=connectors[i].copy(pathStyle=style) } }
+            if (version >= 11) { for (i in connectors.indices) { val style=input.readUTF(); require(style in EditorStyleCatalog.connectorPathStyles); connectors[i]=connectors[i].copy(pathStyle=style) } }
             val page=Page(id, title, text, x, y, strokes, blocks, shapes, connectors, images, styles, folder, trashed, templates)
             if(version>=12) { val ids=List(strokes.size) { input.readUTF() }; val all=ids+shapes.map { it.id }+images.map { it.id }+connectors.map { it.id }; require(all.all { it.isNotEmpty() } && all.distinct().size==all.size); page.strokeIds.clear();page.strokeIds.addAll(ids) }
             if(version>=13) { val count=input.readCount();val layers=List(count) { input.readUTF() };val all=page.orderedLayerIds();require(layers.size==all.size && layers.toSet()==all.toSet());page.layerIds.clear();page.layerIds.addAll(layers) }
             if(version>=17) { for(i in page.images.indices) {val rotation=input.readInt();val flipX=input.readBoolean();val flipY=input.readBoolean();val left=input.readFloat();val top=input.readFloat();val right=input.readFloat();val bottom=input.readFloat();require(rotation in 0..3 && validImageCrop(left,top,right,bottom));page.images[i]=page.images[i].copy(rotation=rotation,flipX=flipX,flipY=flipY,cropLeft=left,cropTop=top,cropRight=right,cropBottom=bottom)} }
-            if(version>=18) { for(i in page.shapes.indices) { val borderColor=input.readInt(); val borderStyle=input.readUTF(); val borderWidth=input.readFloat(); val cornerRadius=input.readFloat(); val textColor=input.readInt(); require(borderStyle in setOf("solid","dashed","none") && borderWidth in 0f..12f && cornerRadius in 0f..64f); page.shapes[i]=page.shapes[i].copy(borderColor=borderColor,borderStyle=borderStyle,borderWidth=borderWidth,cornerRadius=cornerRadius,textColor=textColor) } }
+            if(version>=18) { for(i in page.shapes.indices) { val borderColor=input.readInt(); val borderStyle=input.readUTF(); val borderWidth=input.readFloat(); val cornerRadius=input.readFloat(); val textColor=input.readInt(); require(borderStyle in EditorStyleCatalog.borderStyles && borderWidth in 0f..12f && cornerRadius in 0f..64f); page.shapes[i]=page.shapes[i].copy(borderColor=borderColor,borderStyle=borderStyle,borderWidth=borderWidth,cornerRadius=cornerRadius,textColor=textColor) } }
             if(version>=19) { for(i in page.shapes.indices) page.shapes[i]=page.shapes[i].copy(locked=input.readBoolean()) }
-            if(version>=20) { for(i in page.shapes.indices) { val kind=input.readUTF(); val fontSize=input.readFloat(); val textAlign=input.readUTF(); require(fontSize in 8f..96f && textAlign in setOf("left","center","right")); page.shapes[i]=page.shapes[i].copy(cardKind=kind,fontSize=fontSize,textAlign=textAlign) } }
+            if(version>=20) { for(i in page.shapes.indices) { val kind=input.readUTF(); val fontSize=input.readFloat(); val textAlign=input.readUTF(); require(fontSize in 8f..96f && textAlign in EditorStyleCatalog.textAligns); page.shapes[i]=page.shapes[i].copy(cardKind=kind,fontSize=fontSize,textAlign=textAlign) } }
             if(version>=21) {
                 val folderCount=input.readCount(1000)
                 val decodedFolders=List(folderCount) { input.readUTF() }
@@ -279,7 +309,7 @@ class Page private constructor(val id: String, var title: String, var text: Stri
             if(version>=24) {
                 for(i in page.shapes.indices) {
                     val shadowStyle=input.readUTF()
-                    require(shadowStyle in setOf("none", "box", "sticker"))
+                    require(shadowStyle in SHADOW_STYLES)
                     page.shapes[i]=page.shapes[i].copy(shadowStyle=shadowStyle)
                 }
             }

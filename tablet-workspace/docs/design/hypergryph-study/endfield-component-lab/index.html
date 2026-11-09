@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#e8e9e3">
+  <title>工业主题 · UI 组件与交互实验室</title>
+  <link rel="stylesheet" href="./lab.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead">
+      <div class="eyebrow"><span class="signal-block"></span> LINGYE / DESIGN EXPERIMENT <span class="serial">EX–01　/　2026</span></div>
+      <div class="hero-row"><div><p class="kicker">VISUAL SYSTEM / COMPONENT STUDY</p><h1>工业主题<br><em>组件与交互实验室</em></h1></div><p class="hero-copy">同一套黑白灰与信号黄体系，比较四种不同的控制逻辑。先选择组件，再操作四栏；白板与正式应用均未修改。</p></div>
+      <div class="mast-foot"><span>08 组件族</span><span>04 造型方向</span><span>06 状态关键帧</span><span class="mast-note">ORIGINAL DESIGN STUDY　/　非官方界面复制</span></div>
+    </header>
+
+    <div class="labbar" role="toolbar" aria-label="实验室控制">
+      <nav class="view-tabs" aria-label="视图"><button class="view-tab is-current" data-view="live" aria-current="page">01　交互原型</button><button class="view-tab" data-view="comparison">02　横向对比图</button><button class="view-tab" data-view="states">03　状态分解图</button><button class="view-tab" data-view="motion">04　动画与评估</button></nav>
+      <div class="lab-actions"><a class="utility-button" href="./toolbar-motion-study.html" style="display:inline-flex;align-items:center;text-decoration:none">工具栏动效对比 ↗</a><label class="motion-switch"><input type="checkbox" id="reduceMotion"><span class="motion-check" aria-hidden="true"></span>减少动态效果</label><button id="replayAll" class="utility-button" type="button">↻　重播交互</button></div>
+    </div>
+
+    <main>
+      <section id="liveView" class="view is-visible" aria-label="交互原型">
+        <div class="intro"><span class="section-code">01 / LIVE</span><div><h2>同屏操作，直接比较反馈</h2><p>触摸、鼠标或键盘均可操作。顶部的“减少动态效果”会立即停止位移与装饰过渡；“重播交互”将组件复位并演示一次切换。</p></div></div>
+        <div class="matrix-scroll"><div class="matrix-header"><div class="row-label"><span>COMPONENT</span><strong>同任务 / 同尺寸</strong></div><div class="column-head"><b>A</b><strong>极简工业</strong><small>Minimal Industrial</small></div><div class="column-head"><b>B</b><strong>机械控制</strong><small>Mechanical Control</small></div><div class="column-head"><b>C</b><strong>数字终端</strong><small>Digital Terminal</small></div><div class="column-head"><b>D</b><strong>模块科技</strong><small>Modular Tech</small></div></div>
+        <div id="liveGrid" class="live-grid"></div></div>
+      </section>
+
+      <section id="comparisonView" class="view" aria-label="横向对比图">
+        <div class="intro"><span class="section-code">02 / FORM</span><div><h2>八类组件 × 四种造型</h2><p>相同尺寸、相同任务和相同激活条件。图像独立于交互原型生成，适合放大比较外形、信息层级及触控热区。</p></div></div>
+        <a class="download-link" href="./comparison.svg" download>下载横向对比 SVG ↗</a>
+        <div class="image-frame"><img src="./comparison.svg" alt="八类组件四种工业主题设计的横向静态对比图"></div>
+      </section>
+
+      <section id="statesView" class="view" aria-label="状态关键帧">
+        <div class="intro"><span class="section-code">03 / STATE</span><div><h2>默认到过渡中间态</h2><p>每类组件均按 A–D 四行、Default / Hover / Pressed / Active / Disabled / Transition 六列展示。Hover 只供鼠标使用，触控依靠 Pressed 与 Active。</p></div></div>
+        <a class="download-link" href="./states.svg" download>下载状态图 SVG ↗</a>
+        <div class="image-frame states-frame"><img src="./states.svg" alt="八类组件四方案六状态的静态关键帧对比图"></div>
+      </section>
+
+      <section id="motionView" class="view" aria-label="动画与评估">
+        <div class="intro"><span class="section-code">04 / SYSTEM</span><div><h2>运动机制与设计取舍</h2><p>下列时间和曲线是本实验的原创提案，不是官方测量。分数是设计师预评估，尚无真实用户测试。</p></div></div>
+        <a class="download-link" href="./motion.svg" download>下载动画分解 SVG ↗</a>
+        <div class="image-frame motion-frame"><img src="./motion.svg" alt="四种开关交互机制从起始到中间再到结束的动画分解图"></div>
+        <div class="motion-grid" id="motionGrid"></div>
+        <h3 class="table-heading">设计师初步评估 <small>1 弱 — 5 强；“成本”分数越高表示越容易维护</small></h3>
+        <div class="table-scroll"><table id="scoreTable"><thead><tr><th>评估维度</th><th>A 极简工业</th><th>B 机械控制</th><th>C 数字终端</th><th>D 模块科技</th></tr></thead><tbody></tbody></table></div>
+        <div class="recommendation"><span class="section-code">RECOMMEND / 01</span><div><h3>推荐混合方案</h3><p><b>A</b> 用于高频导航、普通按钮和表单；<b>B</b> 用于开关与滑块；<b>C</b> 用于数值、状态提示和精确反馈；<b>D</b> 只用于画布浮动工具台与关键模式切换。统一触控热区、字号和信号色，避免四套造型同时争夺视觉重心。</p></div></div>
+        <p class="source-line">研究依据：<a href="https://endfield.hypergryph.com/operator" target="_blank" rel="noopener noreferrer">终末地官方干员情报</a>、<a href="https://endfield.hypergryph.com/#gameplay" target="_blank" rel="noopener noreferrer">官网玩法展示</a>、<a href="https://endfield.gryphline.com/en-us/news/4481" target="_blank" rel="noopener noreferrer">官方框选与操作反馈说明</a>。具体观察、推断与迁移边界见 <a href="./DESIGN.md">设计说明</a>。</p>
+      </section>
+    </main>
+
+    <footer><span>LINGYE / INDUSTRIAL LAB</span><span>实验原型 · 不写入应用数据</span><span>END / 01</span></footer>
+  </div>
+  <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
+  <script src="./lab.js"></script>
+</body>
+</html>

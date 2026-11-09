@@ -25,8 +25,21 @@ class PageNoteStyleTest {
     }
 
     @Test
-    fun newShapesDefaultToCardShadow() {
-        assertEquals("box", Shape("card", 0f, 0f, 10f, 10f).shadowStyle)
+    fun newShapesDefaultToPaperShadow() {
+        assertEquals("paper", Shape("card", 0f, 0f, 10f, 10f).shadowStyle)
+    }
+
+    @Test
+    fun allTextViewShadowStylesRoundTrip() {
+        val page = Page.create("All shadows")
+        SHADOW_STYLES.forEachIndexed { index, style ->
+            page.shapes.add(
+                Shape("text", index * 10f, 0f, 120f, 60f, shadowStyle = style, body = style)
+            )
+        }
+
+        val restored = Page.decode(page.encode())
+        assertEquals(SHADOW_STYLES, restored.shapes.map { it.shadowStyle }.toSet())
     }
 
     @Test

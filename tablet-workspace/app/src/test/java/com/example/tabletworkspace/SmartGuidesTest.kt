@@ -1,6 +1,7 @@
 package com.example.tabletworkspace
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -101,5 +102,27 @@ class SmartGuidesTest {
         val result = SmartGuides.snap(box(100f, 100f, 150f, 150f), listOf(box(100f, 100f, 150f, 150f)), threshold = 0f)
         assertEquals(0f, result.dx, 0.001f)
         assertTrue(result.guides.isEmpty())
+    }
+
+    @Test
+    fun snapEdgeFindsNearestEdgeForResize() {
+        val others = listOf(box(200f, 0f, 260f, 80f))
+
+        val match = SmartGuides.snapEdge(194f, others, threshold = 8f, vertical = true)
+        assertEquals(6f, match!!.first, 0.001f)
+        assertEquals(200f, match.second, 0.001f)
+        assertNull(SmartGuides.snapEdge(180f, others, threshold = 8f, vertical = true))
+    }
+
+    @Test
+    fun guideForResizeSpansResizedBoundsAndMatchedEdge() {
+        val guide = SmartGuides.guideFor(
+            vertical = true,
+            position = 200f,
+            bounds = box(100f, 40f, 200f, 120f),
+            others = listOf(box(200f, 10f, 260f, 90f))
+        )
+        assertEquals(10f, guide!!.start, 0.001f)
+        assertEquals(120f, guide.end, 0.001f)
     }
 }

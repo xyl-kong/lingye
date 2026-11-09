@@ -100,12 +100,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.*
 
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasTextToolbar(
     index: Int?, visible: Boolean, page: Page, language: AppLanguage, scale: Float, viewport: Viewport,
     canvasWidthDp: Dp, canvasHeightDp: Dp, imeBottomDp: Dp, objectKind: CanvasObjectKind?,
     onSelect: (CanvasSelection?, List<CanvasSelection>) -> Unit, onChanged: () -> Unit,
-    onDrawConnector: (Int) -> Unit
+    onDrawConnector: (Int) -> Unit,
+    onConvertToLinkedDoc: (Int) -> Unit
 ) {
         AnimatedVisibility(
             visible = visible,
@@ -120,6 +122,91 @@ internal fun CanvasTextToolbar(
                     var moreMenu by remember(index) { mutableStateOf(false) }
                     val context = LocalContext.current
                     val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                    fun createSection(title: String, fill: Int, borderStyle: String) {
+                        val shape = page.shapes.getOrNull(index) ?: return
+                        val pad = 24f
+                        page.addShape(
+                            "frame", shape.x - pad, shape.y - 36f,
+                            shape.width + pad * 2, shape.height + 36f + pad,
+                            color = fill
+                        )
+                        val frameIndex = page.shapes.lastIndex
+                        page.shapes[frameIndex] = page.shapes[frameIndex].copy(
+                            title = title,
+                            borderColor = 0xffd8d8d8.toInt(),
+                            borderStyle = borderStyle,
+                            borderWidth = 1f,
+                            cornerRadius = 10f
+                        )
+                        moreMenu = false
+                        onChanged()
+                    }
+                    fun copyAsImage() {
+                        val shape = page.shapes.getOrNull(index) ?: return
+                        val scale = 2f
+                        val bitmap = android.graphics.Bitmap.createBitmap(
+                            (shape.width * scale).toInt().coerceAtLeast(120),
+                            (shape.height * scale).toInt().coerceAtLeast(60),
+                            android.graphics.Bitmap.Config.ARGB_8888
+                        )
+                        val canvas = android.graphics.Canvas(bitmap)
+                        canvas.drawColor(shape.color)
+                        val border = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                            color = shape.borderColor
+                            style = android.graphics.Paint.Style.STROKE
+                            strokeWidth = shape.borderWidth * scale
+                        }
+                        canvas.drawRect(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat(), border)
+                        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                            color = shape.textColor
+                            textSize = shape.fontSize * scale
+                            typeface = when (shape.fontFamily) {
+                                "serif" -> android.graphics.Typeface.SERIF
+                                "mono" -> android.graphics.Typeface.MONOSPACE
+                                else -> android.graphics.Typeface.SANS_SERIF
+                            }
+                            isFakeBoldText = shape.fontWeight >= 600
+                            if (shape.fontStyle == "italic") textSkewX = -0.2f
+                            textAlign = when (shape.textAlign) {
+                                "center" -> android.graphics.Paint.Align.CENTER
+                                "right" -> android.graphics.Paint.Align.RIGHT
+                                else -> android.graphics.Paint.Align.LEFT
+                            }
+                        }
+                        val maxWidth = bitmap.width - 32f * scale
+                        val lines = mutableListOf<String>()
+                        var line = ""
+                        shape.body.lines().forEach { paragraph ->
+                            line = ""
+                            paragraph.forEach { ch ->
+                                val next = line + ch
+                                if (line.isNotEmpty() && paint.measureText(next) > maxWidth) {
+                                    lines += line
+                                    line = ch.toString()
+                                } else {
+                                    line = next
+                                }
+                            }
+                            lines += line
+                        }
+                        val x = when (shape.textAlign) {
+                            "center" -> bitmap.width / 2f
+                            "right" -> bitmap.width - 16f * scale
+                            else -> 16f * scale
+                        }
+                        var baseline = 16f * scale + paint.textSize
+                        lines.forEach { text ->
+                            if (baseline <= bitmap.height) canvas.drawText(text, x, baseline, paint)
+                            baseline += paint.textSize * 1.25f
+                        }
+                        val file = java.io.File(context.cacheDir, "lingye-text-${shape.id}.png")
+                        java.io.FileOutputStream(file).use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+                        clipboard?.setPrimaryClip(android.content.ClipData.newUri(context.contentResolver, "Lingye text", uri))
+                        android.widget.Toast.makeText(context, tr(language, "已复制为图片", "Copied as image"), android.widget.Toast.LENGTH_SHORT).show()
+                        bitmap.recycle()
+                        moreMenu = false
+                    }
                     val bounds = page.selectionBounds(listOf(CanvasSelection("shape", index))) ?: return@let
                     val at = viewport.toScreen(Point(bounds.left, bounds.top))
                     ContextualToolbarHost(
@@ -282,8 +369,12 @@ internal fun CanvasTextToolbar(
                                     modifier = Modifier.width(208.dp)
                                 ) {
                                     Column(Modifier.padding(vertical = 4.dp)) {
-                                        TextMenuRow(tr(language, "创建 Frame 区域", "Frame section"), enabled = false, icon = { tint -> WorkspaceIcon(AppIcon.FRAME, null, Modifier.size(18.dp), tint) }) {}
-                                        TextMenuRow(tr(language, "创建分组区域", "Group section"), enabled = false, icon = { tint -> WorkspaceIcon(AppIcon.OVERVIEW, null, Modifier.size(18.dp), tint) }) {}
+                                        TextMenuRow(tr(language, "创建 Frame 区域", "Frame section"), icon = { tint -> WorkspaceIcon(AppIcon.FRAME, null, Modifier.size(18.dp), tint) }) {
+                                            createSection(tr(language, "框架", "Frame"), 0xffffffff.toInt(), "solid")
+                                        }
+                                        TextMenuRow(tr(language, "创建分组区域", "Group section"), icon = { tint -> WorkspaceIcon(AppIcon.OVERVIEW, null, Modifier.size(18.dp), tint) }) {
+                                            createSection(tr(language, "分组", "Group"), 0xfff5f6f8.toInt(), "dashed")
+                                        }
                                         TextMenuGroupDivider()
                                         layerMenuEntries(language).forEachIndexed { layerIndex, (move, label) ->
                                             TextMenuRow(label, icon = { tint -> WorkspaceIcon(if (layerIndex < 2) AppIcon.LAYER_UP else AppIcon.LAYER_DOWN, null, Modifier.size(18.dp), tint) }) {
@@ -299,7 +390,9 @@ internal fun CanvasTextToolbar(
                                             android.widget.Toast.makeText(context, tr(language, "已复制", "Copied"), android.widget.Toast.LENGTH_SHORT).show()
                                             moreMenu = false
                                         }
-                                        TextMenuRow(tr(language, "复制为图片", "Copy as Image"), enabled = false, icon = { tint -> WorkspaceIcon(AppIcon.IMAGE, null, Modifier.size(18.dp), tint) }) {}
+                                        TextMenuRow(tr(language, "复制为图片", "Copy as Image"), icon = { tint -> WorkspaceIcon(AppIcon.IMAGE, null, Modifier.size(18.dp), tint) }) {
+                                            copyAsImage()
+                                        }
                                         TextMenuRow(tr(language, "复制为 Markdown", "Copy as Markdown"), icon = { tint -> WorkspaceIcon(AppIcon.CODE_BLOCK, null, Modifier.size(18.dp), tint) }) {
                                             clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Lingye", text.body))
                                             android.widget.Toast.makeText(context, tr(language, "已复制为 Markdown", "Copied as Markdown"), android.widget.Toast.LENGTH_SHORT).show()
@@ -317,7 +410,10 @@ internal fun CanvasTextToolbar(
                                             onChanged()
                                         }
                                         TextMenuGroupDivider()
-                                        TextMenuRow(tr(language, "转为链接文档", "Turn into linked doc"), enabled = false, icon = { tint -> WorkspaceIcon(AppIcon.DOCUMENT, null, Modifier.size(18.dp), tint) }) {}
+                                        TextMenuRow(tr(language, "转为链接文档", "Turn into linked doc"), icon = { tint -> WorkspaceIcon(AppIcon.DOCUMENT, null, Modifier.size(18.dp), tint) }) {
+                                            moreMenu = false
+                                            onConvertToLinkedDoc(index)
+                                        }
                                         TextMenuGroupDivider()
                                         TextMenuRow(tr(language, "删除文本", "Delete"), danger = true, icon = { tint -> WorkspaceIcon(AppIcon.TRASH, null, Modifier.size(18.dp), tint) }) {
                                             page.deleteSelection(CanvasSelection("shape", index))

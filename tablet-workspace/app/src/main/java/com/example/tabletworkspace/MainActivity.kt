@@ -60,6 +60,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.border
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
@@ -185,7 +187,8 @@ private fun ExportSubmenuPanel(
     onExportHtml: () -> Unit,
     onExportMarkdown: () -> Unit,
     onCopyMarkdown: () -> Unit,
-    onExportSnapshot: () -> Unit
+    onExportSnapshot: () -> Unit,
+    onExportPdf: () -> Unit
 ) {
     Surface(
         Modifier.width(248.dp),
@@ -195,6 +198,7 @@ private fun ExportSubmenuPanel(
         border = BorderStroke(1.dp, LingyeColors.Line)
     ) {
         Column {
+            MenuRow(tr(language, "导出为 PDF", "Export as PDF"), onExportPdf, icon = AppIcon.DOCUMENT)
             MenuRow(tr(language, "导出为 HTML", "Export as HTML"), onExportHtml, icon = AppIcon.CODE_BLOCK)
             MenuRow(tr(language, "导出为 Markdown", "Export as Markdown"), onExportMarkdown, icon = AppIcon.SAVE)
             MenuRow(tr(language, "复制为 Markdown", "Copy as Markdown"), onCopyMarkdown, icon = AppIcon.COPY)
@@ -340,6 +344,7 @@ private fun SidebarPageItem(
     onOpenInNewTab: () -> Unit = {},
     onFavorite: () -> Unit,
     onRemoveFolder: () -> Unit,
+    onMove: () -> Unit,
     onTrash: () -> Unit,
     indented: Boolean = false
 ) {
@@ -389,6 +394,7 @@ private fun SidebarPageItem(
                         onOpenInNewTab,
                         onFavorite,
                         onRemoveFolder,
+                        onMove,
                         onTrash
                     )
                 }
@@ -463,6 +469,30 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
     val bootstrapState by produceState<WorkspaceBootstrap?>(initialValue = null, workspaceRepository) { value = workspaceRepository.load() }
     var contentLoaded by remember { mutableStateOf(false) }
     val pages = remember { mutableStateListOf<Page>() }
+    var pageOrder by remember {
+        mutableStateOf(preferences.getString("page_order", "").orEmpty().split(',').filter { it.isNotBlank() })
+    }
+    var sidebarDragPageId by remember { mutableStateOf<String?>(null) }
+    var sidebarDragFolder by remember { mutableStateOf<String?>(null) }
+    var sidebarDragPoint by remember { mutableStateOf(Offset.Zero) }
+    var sidebarDropTarget by remember { mutableStateOf<String?>(null) }
+    val sidebarDropBounds = remember { mutableStateMapOf<String, Rect>() }
+    fun savePageOrder(ids: List<String>) {
+        pageOrder = ids
+        preferences.edit().putString("page_order", ids.joinToString(",")).apply()
+    }
+    fun effectivePageOrder(): List<String> {
+        val known = pages.map { it.id }
+        return (pageOrder.filter { it in known } + known.filter { it !in pageOrder }).distinct()
+    }
+    fun movePageBefore(draggedId: String, targetId: String) {
+        if (draggedId == targetId) return
+        val current = effectivePageOrder().toMutableList()
+        current.remove(draggedId)
+        val index = current.indexOf(targetId).let { if (it < 0) current.size else it }
+        current.add(index, draggedId)
+        savePageOrder(current)
+    }
     var modifiedTimes by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var failedPages by remember { mutableStateOf(emptyList<String>()) }
     var templatesAvailable by remember { mutableStateOf(true) }
@@ -482,13 +512,16 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
     var allDocsHome by remember { mutableStateOf(true) }
     var tagFilter by remember { mutableStateOf<String?>(null) }
     var folderMenu by remember { mutableStateOf(false) }; var moveMenu by remember { mutableStateOf(false) }
-    var createFolder by remember { mutableStateOf(false) }; var folderName by remember { mutableStateOf("") }; var folderError by remember { mutableStateOf<String?>(null) }
+    var createFolder by remember { mutableStateOf(false) }; var folderName by remember { mutableStateOf("") }; var folderError by remember { mutableStateOf<String?>(null) }; var folderParent by remember { mutableStateOf<String?>(null) }
+    var addPagesFolder by remember { mutableStateOf<String?>(null) }; var addPagesSelection by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var moveFolderTarget by remember { mutableStateOf<String?>(null) }
     var deleteEmptyFolder by remember { mutableStateOf(false) }
     var renameEmptyFolder by remember { mutableStateOf(false) }
     var tagEditor by remember { mutableStateOf(false) }; var tagDraft by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<Page?>(pages.firstOrNull { !it.trashed }) }
     val openTabs = remember { mutableStateListOf<String>() }
     var pageActionsMenu by remember { mutableStateOf<String?>(null) }
+    var movePageTarget by remember { mutableStateOf<Page?>(null) }
     var allDocsSelectionRequest by remember { mutableStateOf<Set<String>>(emptySet()) }
     var trashMenu by remember { mutableStateOf(false) }
     var trashSelectionDialog by remember { mutableStateOf(false) }
@@ -588,7 +621,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
         if (compactWorkspace) compactSidebarOpen = true else showSidebar = true
         searchFocusRequest++
     }
-    var imageTarget by remember { mutableStateOf<Page?>(null) }; var imageForCanvas by remember { mutableStateOf(false) }; var imageInsertIndex by remember { mutableStateOf<Int?>(null) }; val current = selected
+    var imageTarget by remember { mutableStateOf<Page?>(null) }; var imageForCanvas by remember { mutableStateOf(false) }; var imageInsertIndex by remember { mutableStateOf<Int?>(null) }; var imageInsertWorldX by remember { mutableStateOf(400f) }; var imageInsertWorldY by remember { mutableStateOf(120f) }; val current = selected
     var pageSidebarOpen by remember { mutableStateOf(false) }
     var pageSidebarRevision by remember { mutableIntStateOf(0) }
     val sidebarProperties = remember(current?.id, pageSidebarRevision) {
@@ -835,7 +868,25 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
             error = failure("使用模板失败", "Use template failed", e)
         }
     }
-    fun movePageToFolder(page: Page, folder: String?) {        pageActionsMenu = null
+    fun favoriteFolder(name: String) {
+        if (!saveCurrent()) return
+        val affected = pages.filter { !it.trashed && name in it.folders && !it.favorite }
+        if (affected.isEmpty()) {
+            notice = text("该文件夹没有需要收藏的文档","No documents to favorite in this folder")
+            return
+        }
+        try {
+            affected.forEach { it.favorite = true; repository.save(it) }
+            revision++
+            savedRevision = revision
+            notice = text("文件夹中的文档已加入收藏","Folder documents added to favorites")
+        } catch (e: Exception) {
+            affected.forEach { it.favorite = false }
+            error = failure("收藏更新失败","Favorite update failed",e)
+        }
+    }
+    fun movePageToFolder(page: Page, folder: String?) {
+        pageActionsMenu = null
         if (!saveCurrent()) return
         val previous = page.folders.toSet()
         page.folders.clear()
@@ -886,6 +937,87 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
         } catch (e: Exception) {
             page.trashed = false
             error = failure("删除失败", "Delete failed", e)
+        }
+    }
+    fun moveFolderToParent(folder: String, parent: String?) {
+        if (!saveCurrent()) return
+        val leaf = folder.substringAfterLast('/')
+        val newName = parent?.takeIf { it.isNotBlank() }?.let { "$it/$leaf" } ?: leaf
+        if (newName == folder) return
+        if (parent != null && (parent == folder || parent.startsWith("$folder/"))) {
+            notice = text("不能把文件夹移入自身或其子文件夹","Cannot move a folder into itself or its child")
+            return
+        }
+        val affected = folders.filter { it == folder || it.startsWith("$folder/") }
+        val renamed = affected.map { newName + it.removePrefix(folder) }
+        if (renamed.any { candidate -> folders.any { it !in affected && it.equals(candidate, true) } }) {
+            notice = text("目标文件夹已有同名子文件夹","A folder with that name already exists")
+            return
+        }
+        try {
+            var next = folders.toList()
+            affected.forEachIndexed { index, old ->
+                val target = renamed[index]
+                next = store.moveFolderContents(old, target, pages.toList(), next)
+                pages.filter { old in it.folders }.forEach { it.folders.remove(old); it.folders.add(target) }
+            }
+            folders.clear(); folders.addAll(next)
+            folderFilter = folderFilter?.let { old -> if (old == folder || old.startsWith("$folder/")) newName + old.removePrefix(folder) else old }
+            expandedFolders = expandedFolders.map { if (it == folder || it.startsWith("$folder/")) newName + it.removePrefix(folder) else it }.toSet() + (parent?.takeIf { it.isNotBlank() } ?: newName)
+            revision++
+            savedRevision = revision
+            notice = if (parent.isNullOrBlank()) text("文件夹已移到根目录","Folder moved to root") else "${text("已移入","Moved into")} $parent"
+        } catch (e: Exception) {
+            error = failure("移动文件夹失败","Folder move failed",e)
+        }
+    }
+    fun trashFolder(folder: String) {
+        if (!saveCurrent()) return
+        val tree = folders.filter { it == folder || it.startsWith("$folder/") }
+        val affected = pages.filter { !it.trashed && it.folders.any { it in tree } }
+        try {
+            affected.forEach { it.trashed = true; repository.save(it) }
+            folders.removeAll(tree)
+            store.saveFolders(folders.toList())
+            if (selected?.id in affected.map { it.id }) {
+                selected = pages.firstOrNull { !it.trashed }
+                allDocsHome = true
+            }
+            folderFilter = null
+            revision++
+            savedRevision = revision
+            notice = text("文件夹已移到回收站","Folder moved to trash")
+        } catch (e: Exception) {
+            affected.forEach { it.trashed = false }
+            error = failure("移动文件夹失败","Folder move failed",e)
+        }
+    }
+    fun dropSidebarPage(pageId: String, target: String?) {
+        val page = pages.firstOrNull { it.id == pageId && !it.trashed } ?: return
+        when {
+            target == "trash" -> trashPage(page)
+            target == "root" -> movePageToFolder(page, null)
+            target?.startsWith("folder:") == true -> {
+                val folder = target.removePrefix("folder:")
+                movePageToFolder(page, folder)
+                expandedFolders = expandedFolders + folder
+            }
+            target?.startsWith("page:") == true -> {
+                val targetPage = pages.firstOrNull { it.id == target.removePrefix("page:") } ?: return
+                val targetFolder = targetPage.folders.firstOrNull()
+                if (page.folders.toSet() != setOfNotNull(targetFolder)) movePageToFolder(page, targetFolder)
+                movePageBefore(page.id, targetPage.id)
+            }
+        }
+    }
+    fun dropSidebarFolder(folder: String, target: String?) {
+        when {
+            target == "trash" -> trashFolder(folder)
+            target == "root" -> moveFolderToParent(folder, null)
+            target?.startsWith("folder:") == true -> {
+                val parent = target.removePrefix("folder:")
+                if (parent != folder) moveFolderToParent(folder, parent)
+            }
         }
     }
     fun duplicatePage(source: Page) {
@@ -1098,7 +1230,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
         if (uri != null && target != null) { ioBusy = true; scope.launch {
             try {
                 val (name, ratio) = withContext(Dispatchers.IO) { val name = store.importImage(uri); val bitmap = if (forCanvas) store.image(name) ?: error("图片无法解码") else null; name to (bitmap?.let { it.height.toFloat() / it.width } ?: 1f) }
-                if (forCanvas) target.addCanvasImage(name, 400f, 120f, 240f, (240f * ratio).coerceIn(40f, 700f)) else {
+                if (forCanvas) target.addCanvasImage(name, imageInsertWorldX, imageInsertWorldY, 240f, (240f * ratio).coerceIn(40f, 700f)) else {
                     val at = imageInsertIndex
                     if (at != null && at in 0..target.blocks.size) target.blocks.add(at, Block("image", name)) else target.addBlock("image", name)
                 }
@@ -1280,6 +1412,30 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
             }
         }
     }
+    val pdfExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        val page = current
+        if (uri != null && page != null) {
+            ioBusy = true
+            scope.launch {
+                try {
+                    val background = workspaceSettings.canvasBackground
+                    val bitmaps = withContext(Dispatchers.IO) {
+                        page.images.mapNotNull { image -> store.image(image.name)?.let { image.name to it } }.toMap()
+                    }
+                    val content = withContext(Dispatchers.Default) {
+                        CanvasPdfExporter.encode(page, background) { bitmaps[it] }
+                    }
+                    withContext(Dispatchers.IO) { store.writeBackup(uri, content) }
+                    error = null
+                    notice = text("PDF 已导出", "PDF exported")
+                } catch (e: Exception) {
+                    error = failure("PDF 导出失败", "PDF export failed", e)
+                } finally {
+                    ioBusy = false
+                }
+            }
+        }
+    }
     val snapshotExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val page = current
         if (uri != null && page != null) {
@@ -1340,7 +1496,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(40.dp).clip(RoundedCornerShape(13.dp))) {
                     Image(painterResource(R.drawable.ic_launcher_background), contentDescription = null, modifier = Modifier.fillMaxSize())
-                    Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxSize())
+                    Image(painterResource(R.drawable.ic_brand_foreground), contentDescription = null, modifier = Modifier.fillMaxSize())
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
@@ -1381,11 +1537,11 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                             rootCreateMenu = false
                             if (saveCurrent()) { val page = Page.create(newPageTitle(language, workspaceSettings, existingTitles = pages.map { it.title })); try { repository.save(page); pages.add(page); selected = page; folderFilter = null; trashMode = false; favoriteMode = false; journalMode = false; templateMode = false; allDocsHome = false; canvas = workspaceSettings.defaultPageMode == DefaultPageMode.WHITEBOARD; overview = false; settingsPage = false; revision++; savedRevision = revision } catch (e: Exception) { error = failure("创建失败","Create failed",e) } }
                         }, icon = AppIcon.DOCUMENT)
-                        MenuRow(text("新建文件夹","New folder"), { rootCreateMenu = false; folderName = ""; folderError = null; createFolder = true }, icon = AppIcon.FOLDER, enabled = foldersAvailable)
+                        MenuRow(text("新建文件夹","New folder"), { rootCreateMenu = false; folderParent = null; folderName = ""; folderError = null; createFolder = true }, icon = AppIcon.FOLDER, enabled = foldersAvailable)
                     }
                 }
             }
-            if (!folderFilter.isNullOrEmpty() && foldersAvailable) Row { TextButton(onClick={deleteEmptyFolder=true}) { Text(text("删除文件夹","Delete folder")) }; TextButton(onClick={folderName=folderFilter.orEmpty();folderError=null;renameEmptyFolder=true}) { Text(text("重命名文件夹","Rename folder")) } }
+            if (!folderFilter.isNullOrEmpty() && foldersAvailable) Row { TextButton(onClick={deleteEmptyFolder=true}) { Text(text("删除文件夹","Delete folder")) }; TextButton(onClick={folderName=folderFilter?.substringAfterLast('/').orEmpty();folderError=null;renameEmptyFolder=true}) { Text(text("重命名文件夹","Rename folder")) } }
             Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 SidebarNavigationRow(AppIcon.PAGES, text("全部文档","All documents"), !trashMode && !favoriteMode && !journalMode && !templateMode && folderFilter == null, {
                     folderFilter = null
@@ -1396,7 +1552,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                     allDocsHome = true
                     overview = false
                     settingsPage = false
-                }, animateSelection = false)
+                }, modifier = Modifier.onGloballyPositioned { sidebarDropBounds["root"] = it.boundsInWindow() }, animateSelection = false)
                 SidebarNavigationRow(AppIcon.FAVORITE, text("收藏","Favorites"), favoriteMode, {
                     folderFilter = null
                     trashMode = false
@@ -1439,7 +1595,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                     allDocsHome = false
                     overview = false
                     settingsPage = false
-                }, trailing = {
+                }, modifier = Modifier.onGloballyPositioned { sidebarDropBounds["trash"] = it.boundsInWindow() }, trailing = {
                     Box {
                         CompactIconAction(
                             AppIcon.MORE,
@@ -1487,8 +1643,8 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                 }
             }
             val pageSearchIndex = remember { PageSearchIndex() }
-            val visiblePages = remember(pages.size, revision, search, folderFilter, trashMode, sharedBlocks.size, tagFilter, favoriteMode) {
-                if (search.isBlank()) {
+            val visiblePages = remember(pages.size, revision, search, folderFilter, trashMode, sharedBlocks.size, tagFilter, favoriteMode, pageOrder) {
+                val filtered = if (search.isBlank()) {
                     filterPages(
                         pages,
                         search,
@@ -1510,11 +1666,80 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                         favoriteMode
                     )
                 }
+                val order = (pageOrder + filtered.map { it.id }).distinct().withIndex().associate { it.value to it.index }
+                filtered.sortedBy { order[it.id] ?: Int.MAX_VALUE }
             }
             val pageRowModels = remember(pages.size, revision, metaRevision) {
                 pages.associate { it.id to PageRowModel.of(it) }
             }
             val showFolderTree = !trashMode && !favoriteMode && folderFilter == null
+            fun sidebarDropTargetAt(point: Offset): String? =
+                sidebarDropBounds.entries.lastOrNull { it.value.contains(point) }?.key
+            fun resetSidebarDrag() {
+                sidebarDragPageId = null
+                sidebarDragFolder = null
+                sidebarDropTarget = null
+            }
+            fun pageDragModifier(pageId: String): Modifier = Modifier
+                .onGloballyPositioned { sidebarDropBounds["page:$pageId"] = it.boundsInWindow() }
+                .pointerInput(pageId) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { start ->
+                            sidebarDragPageId = pageId
+                            sidebarDragFolder = null
+                            sidebarDropTarget = null
+                            sidebarDragPoint = start + (sidebarDropBounds["page:$pageId"]?.topLeft ?: Offset.Zero)
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            val rect = sidebarDropBounds["page:$pageId"]
+                            if (rect != null) {
+                                sidebarDragPoint = rect.topLeft + change.position
+                                sidebarDropTarget = sidebarDropTargetAt(sidebarDragPoint)
+                            }
+                        },
+                        onDragEnd = {
+                            val target = sidebarDropTarget
+                            dropSidebarPage(pageId, target)
+                            resetSidebarDrag()
+                        },
+                        onDragCancel = { resetSidebarDrag() }
+                    )
+                }
+                .then(
+                    if (sidebarDropTarget == "page:$pageId") Modifier.border(2.dp, LingyeColors.Primary, RoundedCornerShape(10.dp))
+                    else Modifier
+                )
+            fun folderDragModifier(name: String): Modifier = Modifier
+                .onGloballyPositioned { sidebarDropBounds["folder:$name"] = it.boundsInWindow() }
+                .pointerInput(name) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { start ->
+                            sidebarDragFolder = name
+                            sidebarDragPageId = null
+                            sidebarDropTarget = null
+                            sidebarDragPoint = start + (sidebarDropBounds["folder:$name"]?.topLeft ?: Offset.Zero)
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            val rect = sidebarDropBounds["folder:$name"]
+                            if (rect != null) {
+                                sidebarDragPoint = rect.topLeft + change.position
+                                sidebarDropTarget = sidebarDropTargetAt(sidebarDragPoint)
+                            }
+                        },
+                        onDragEnd = {
+                            val target = sidebarDropTarget
+                            dropSidebarFolder(name, target)
+                            resetSidebarDrag()
+                        },
+                        onDragCancel = { resetSidebarDrag() }
+                    )
+                }
+                .then(
+                    if (sidebarDropTarget == "folder:$name") Modifier.border(2.dp, LingyeColors.Primary, RoundedCornerShape(10.dp))
+                    else Modifier
+                )
             val linkedDocs = remember(current?.id, pages, revision, workspaceSettings.showLinkedDocs) {
                 val page = current
                 if (page == null || !workspaceSettings.showLinkedDocs) emptyList()
@@ -1576,16 +1801,30 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                   }
                 }
               }
-              if (showFolderTree) folders.forEach { name ->
+              fun folderVisible(name: String): Boolean {
+                if (search.isNotBlank()) return true
+                var parent = name.substringBeforeLast('/', "")
+                while (parent.isNotEmpty()) {
+                  if (parent !in expandedFolders) return false
+                  parent = parent.substringBeforeLast('/', "")
+                }
+                return true
+              }
+              val orderedFolders = folders.sortedWith(
+                compareBy({ it.substringBefore('/').lowercase() }, { it.count { ch -> ch == '/' } }, { it.lowercase() })
+              )
+              if (showFolderTree) orderedFolders.forEach { name ->
+                if (!folderVisible(name)) return@forEach
+                val depth = name.count { ch -> ch == '/' }
                 item(key = "folder:$name", contentType = "folder") {
                   val expanded = name in expandedFolders || search.isNotBlank()
-                  Row(Modifier.fillMaxWidth().heightIn(min = 46.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Row(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { expandedFolders = if (name in expandedFolders) expandedFolders - name else expandedFolders + name }.padding(start = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                  Row(Modifier.fillMaxWidth().heightIn(min = 46.dp).then(folderDragModifier(name)), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { expandedFolders = if (name in expandedFolders) expandedFolders - name else expandedFolders + name }.padding(start = 10.dp + (depth * 16).dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                       Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
                         SidebarChevron(expanded, Modifier.size(20.dp))
                       }
                       Spacer(Modifier.width(4.dp)); SidebarFolderIcon(expanded, Modifier.size(20.dp)); Spacer(Modifier.width(12.dp))
-                      Text(name, Modifier.weight(1f), maxLines = 1, color = LingyeColors.Ink, fontSize = 15.sp)
+                      Text(name.substringAfterLast('/'), Modifier.weight(1f), maxLines = 1, color = LingyeColors.Ink, fontSize = 15.sp)
                     }
                     Box {
                       CompactIconAction(AppIcon.ADD, text("文件夹新增：","Add to folder: ") + name, { folderAddMenu = name }, LingyeColors.Muted)
@@ -1594,27 +1833,48 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                           folderAddMenu = null
                           createPageInFolder(name)
                         }, icon = AppIcon.DOCUMENT)
-                        MenuRow(text("新建文件夹","New folder"), {}, icon = AppIcon.FOLDER, enabled = false)
-                        MenuRow(text("导入文件","Import file"), {}, icon = AppIcon.RESTORE, enabled = false)
-                        MenuRow(text("从模板创建","Create from template"), {}, icon = AppIcon.CARD, enabled = false)
+                        MenuRow(text("新建文件夹","New folder"), {
+                          folderAddMenu = null
+                          folderParent = name
+                          folderName = ""
+                          folderError = null
+                          createFolder = true
+                        }, icon = AppIcon.FOLDER)
+                        MenuRow(text("导入文件","Import file"), {
+                          folderAddMenu = null
+                          importDialog = true
+                        }, icon = AppIcon.RESTORE)
+                        MenuRow(text("从模板创建","Create from template"), {
+                          folderAddMenu = null
+                          folderFilter = null
+                          trashMode = false
+                          favoriteMode = false
+                          journalMode = false
+                          templateMode = true
+                          allDocsHome = true
+                          overview = false
+                          settingsPage = false
+                          canvas = false
+                        }, icon = AppIcon.CARD)
                       }
                     }
                     Box {
                       CompactIconAction(AppIcon.MORE, text("文件夹选项：","Folder options: ") + name, { folderOptionsMenu = name }, LingyeColors.Muted)
                       LingyeDropdownMenu(expanded = folderOptionsMenu == name, onDismissRequest = { folderOptionsMenu = null }, modifier = Modifier.width(220.dp), offset = DpOffset(10.dp, 6.dp), shape = RoundedCornerShape(12.dp), containerColor = LingyeColors.SurfaceHigh, tonalElevation = 0.dp, shadowElevation = 6.dp, border = BorderStroke(1.dp, LingyeColors.Line)) {
-                        MenuRow(text("重命名","Rename"), { folderOptionsMenu = null; folderFilter = name; folderName = name; folderError = null; renameEmptyFolder = true }, icon = AppIcon.EDIT)
-                        MenuRow(text("创建子文件夹","Create subfolder"), {}, icon = AppIcon.FOLDER, enabled = false)
+                        MenuRow(text("重命名","Rename"), { folderOptionsMenu = null; folderFilter = name; folderName = name.substringAfterLast('/'); folderError = null; renameEmptyFolder = true }, icon = AppIcon.EDIT)
                         MenuRow(text("添加文档","Add document"), { folderOptionsMenu = null; createPageInFolder(name) }, icon = AppIcon.DOCUMENT)
-                        MenuRow(text("添加其他","Add other"), {}, icon = AppIcon.ADD, enabled = false)
-                        MenuRow(text("加入收藏夹","Add to favorites"), {}, icon = AppIcon.FAVORITE, enabled = false)
+                        MenuRow(text("添加其他","Add other"), { folderOptionsMenu = null; addPagesFolder = name; addPagesSelection = emptySet() }, icon = AppIcon.ADD)
+                        MenuRow(text("移动","Move"), { folderOptionsMenu = null; moveFolderTarget = name }, icon = AppIcon.FOLDER)
+                        MenuRow(text("加入收藏夹","Add to favorites"), { folderOptionsMenu = null; favoriteFolder(name) }, icon = AppIcon.FAVORITE)
                         HorizontalDivider(Modifier.padding(vertical = 5.dp), color = LingyeColors.Line)
                         MenuRow(text("删除文件夹","Delete folder"), { folderOptionsMenu = null; folderFilter = name; deleteEmptyFolder = true }, icon = AppIcon.TRASH, danger = true)
                       }
                     }
                   }
                 }
-                if (name in expandedFolders || search.isNotBlank()) items(visiblePages.filter { name in it.folders }, key = { "folder-page:$name:${it.id}" }, contentType = { "folder-page" }) { page ->
+                if ((name in expandedFolders || search.isNotBlank()) && folderVisible(name)) items(visiblePages.filter { name in it.folders }, key = { "folder-page:$name:${it.id}" }, contentType = { "folder-page" }) { page ->
                   val rowModel = pageRowModels[page.id] ?: PageRowModel.of(page)
+                  Box(pageDragModifier(page.id)) {
                   SidebarPageItem(
                       model = rowModel,
                       selected = selected?.id == page.id && !settingsPage && !allDocsHome,
@@ -1631,13 +1891,16 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                       onOpenInNewTab = { openPageInNewTab(page) },
                       onFavorite = { togglePageFavorite(page) },
                       onRemoveFolder = { removePageFromFolder(page) },
+                      onMove = { pageActionsMenu = null; movePageTarget = page },
                       onTrash = { trashPage(page) },
                       indented = true
                   )
+                  }
                 }
               }
               items(if (showFolderTree) visiblePages.filter { it.folders.isEmpty() } else visiblePages, key = { "page:${it.id}" }, contentType = { if (trashMode) "trash-page" else "page" }) { page ->
                 val rowModel = pageRowModels[page.id] ?: PageRowModel.of(page)
+                Box(pageDragModifier(page.id)) {
                 SidebarPageItem(
                     model = rowModel,
                     selected = selected?.id == page.id && !trashMode && !settingsPage && !allDocsHome,
@@ -1667,9 +1930,10 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                     onOpenInNewTab = { openPageInNewTab(page) },
                     onFavorite = { togglePageFavorite(page) },
                     onRemoveFolder = { removePageFromFolder(page) },
+                    onMove = { pageActionsMenu = null; movePageTarget = page },
                     onTrash = { trashPage(page) }
                 )
-            } }
+            } } }
             HorizontalDivider(color=LingyeColors.Line.copy(alpha=0.7f),modifier=Modifier.padding(vertical=6.dp))
             SidebarNavigationRow(AppIcon.SETTINGS, text("设置","Settings"), settingsPage, { settingsPage=true })
           } }
@@ -1893,6 +2157,10 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                                     .replace(Regex("[\\\\/:*?\"<>|]"), "_").take(80)
                                 ExportSubmenuPanel(
                                     language = language,
+                                    onExportPdf = {
+                                        pageMoreMenu = false; exportSubmenu = false
+                                        pdfExporter.launch("$exportName.pdf")
+                                    },
                                     onExportHtml = {
                                         pageMoreMenu = false; exportSubmenu = false
                                         htmlExporter.launch("$exportName.html")
@@ -2141,7 +2409,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                     footer = { if (workspaceSettings.displayBiDirectionalLink) DocumentLinksPanel(current, pages, language) },
                 )
                 }
-            } else CanvasEditor(current, store, pages, workspaceTemplates, sharedBlocks, templatesAvailable, ::replaceTemplates, revision + renderRevision, language, workspaceSettings, canvasFocusMode, { canvasFocusMode = it }, ::beginGesture, ::commitGesture, ::cancelGesture, tool, { tool = it }, penOnly, { penOnly = it; workspaceRepository.savePenOnly(it) }, eraserArea, { eraserArea = it; workspaceRepository.saveEraserArea(it) }, brushKind, { brushKind = it; workspaceRepository.saveBrushKind(it) }, highlighterColor, { highlighterColor = it; workspaceRepository.saveHighlighterColor(it) }, highlighterWidth, { highlighterWidth = it; workspaceRepository.saveHighlighterWidth(it) }, inkColor, { inkColor = it; workspaceRepository.saveInkColor(it) }, inkWidth, { inkWidth = it; workspaceRepository.saveInkWidth(it) }, ::updateWorkspaceSettings, ::change, ::changeGrouped, ::redraw, { imageTarget = current; imageForCanvas = true; picker.launch(arrayOf("image/*", "application/octet-stream")) }, { applyHistory(history?.undo()) }, { applyHistory(history?.redo()) }, { if (!returnToOriginPage()) canvas = false }, { id -> openLinkedPage(id) }, restoredSession.canvasScale, restoredSession.canvasOffsetX, restoredSession.canvasOffsetY, restoredSession.selectedObjectIds, { scale, offsetX, offsetY -> sessionCanvasScale=scale;sessionCanvasOffsetX=offsetX;sessionCanvasOffsetY=offsetY }, { ids -> sessionSelectedObjectIds=ids }, showFrameNavigator = frameNavigatorRequest, onFrameNavigatorShown = { frameNavigatorRequest = false })
+            } else CanvasEditor(current, store, pages, workspaceTemplates, sharedBlocks, templatesAvailable, ::replaceTemplates, revision + renderRevision, language, workspaceSettings, canvasFocusMode, { canvasFocusMode = it }, ::beginGesture, ::commitGesture, ::cancelGesture, tool, { tool = it }, penOnly, { penOnly = it; workspaceRepository.savePenOnly(it) }, eraserArea, { eraserArea = it; workspaceRepository.saveEraserArea(it) }, brushKind, { brushKind = it; workspaceRepository.saveBrushKind(it) }, highlighterColor, { highlighterColor = it; workspaceRepository.saveHighlighterColor(it) }, highlighterWidth, { highlighterWidth = it; workspaceRepository.saveHighlighterWidth(it) }, inkColor, { inkColor = it; workspaceRepository.saveInkColor(it) }, inkWidth, { inkWidth = it; workspaceRepository.saveInkWidth(it) }, ::updateWorkspaceSettings, ::change, ::changeGrouped, ::redraw, { x, y -> imageInsertWorldX = x; imageInsertWorldY = y; imageTarget = current; imageForCanvas = true; picker.launch(arrayOf("image/*", "application/octet-stream")) }, { applyHistory(history?.undo()) }, { applyHistory(history?.redo()) }, { if (!returnToOriginPage()) canvas = false }, { id -> openLinkedPage(id) }, restoredSession.canvasScale, restoredSession.canvasOffsetX, restoredSession.canvasOffsetY, restoredSession.selectedObjectIds, { scale, offsetX, offsetY -> sessionCanvasScale=scale;sessionCanvasOffsetX=offsetX;sessionCanvasOffsetY=offsetY }, { ids -> sessionSelectedObjectIds=ids }, showFrameNavigator = frameNavigatorRequest, onFrameNavigatorShown = { frameNavigatorRequest = false })
         }
         }
         if (pageSidebarOpen && current != null && !allDocsHome && !settingsPage && !overview) {
@@ -2301,8 +2569,8 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
         }
     }
     if (ioBusy) Dialog(onDismissRequest = {}) { Surface(shape = RoundedCornerShape(20.dp)) { Row(Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(Modifier.size(28.dp)); Spacer(Modifier.width(16.dp)); Text(text("正在处理，请稍候…","Processing, please wait…")) } } }
-    if(deleteEmptyFolder) AlertDialog(onDismissRequest={deleteEmptyFolder=false},title={Text(text("删除文件夹？","Delete folder?"))},text={Text(text("页面会从该文件夹移除；其他文件夹归属保持不变。","Pages are removed from this folder; other folder memberships remain."))},confirmButton={TextButton(onClick={ val name=folderFilter; if(name!=null && name.isNotEmpty()) { if(failedPages.isNotEmpty()) error=text("有页面无法读取，无法安全修改文件夹。","Some pages could not be read; folder changes are unavailable.") else if(saveCurrent()) try { val next=store.moveFolderContents(name,"",pages.toList(),folders.toList());pages.filter { name in it.folders }.forEach { it.folders.remove(name) };folders.clear();folders.addAll(next);folderFilter=null;revision++;savedRevision=revision;notice=text("文件夹已删除","Folder deleted") } catch(e:Exception) { error=failure("删除文件夹失败","Folder deletion failed",e) } };deleteEmptyFolder=false }) { Text(text("删除","Delete")) }},dismissButton={TextButton(onClick={deleteEmptyFolder=false}) {Text(text("取消","Cancel"))}})
-    if(renameEmptyFolder) AlertDialog(onDismissRequest={renameEmptyFolder=false},title={Text(text("重命名文件夹","Rename folder"))},text={Column { OutlinedTextField(folderName,{folderName=it;folderError=null},label={Text(text("文件夹名称","Folder name"))},singleLine=true);folderError?.let { Text(it,color=LingyeColors.ErrorInk) } }},confirmButton={TextButton(onClick={val old=folderFilter;val name=folderName.trim();when { old.isNullOrEmpty()->renameEmptyFolder=false; failedPages.isNotEmpty() -> folderError=text("有页面无法读取，无法安全修改文件夹。","Some pages could not be read; folder changes are unavailable."); !FolderCatalog.valid(name)->folderError=text("请输入 1–100 个字符的名称","Enter a name with 1–100 characters"); folders.any { it!=old && it.equals(name,true) }->folderError=text("文件夹名称已存在","That folder name already exists"); else->try { check(saveCurrent());val next=store.moveFolderContents(old,name,pages.toList(),folders.toList());pages.filter { old in it.folders }.forEach { it.folders.remove(old); it.folders.add(name) };folders.clear();folders.addAll(next);folderFilter=name;revision++;savedRevision=revision;renameEmptyFolder=false } catch(e:Exception) { folderError=failure("重命名失败","Rename failed",e) } } }) {Text(text("保存","Save"))}},dismissButton={TextButton(onClick={renameEmptyFolder=false}) {Text(text("取消","Cancel"))}})
+    if(deleteEmptyFolder) AlertDialog(onDismissRequest={deleteEmptyFolder=false},title={Text(text("删除文件夹？","Delete folder?"))},text={Text(text("页面会从该文件夹及其子文件夹移除；其他文件夹归属保持不变。","Pages are removed from this folder and its subfolders; other folder memberships remain."))},confirmButton={TextButton(onClick={ val name=folderFilter; if(name!=null && name.isNotEmpty()) { if(failedPages.isNotEmpty()) error=text("有页面无法读取，无法安全修改文件夹。","Some pages could not be read; folder changes are unavailable.") else if(saveCurrent()) try { val targets=folders.filter { it==name || it.startsWith("$name/") };var next=folders.toList();targets.forEach { target -> next=store.moveFolderContents(target,"",pages.toList(),next);pages.filter { target in it.folders }.forEach { it.folders.remove(target) } };folders.clear();folders.addAll(next);folderFilter=null;revision++;savedRevision=revision;notice=text("文件夹已删除","Folder deleted") } catch(e:Exception) { error=failure("删除文件夹失败","Folder deletion failed",e) } };deleteEmptyFolder=false }) { Text(text("删除","Delete")) }},dismissButton={TextButton(onClick={deleteEmptyFolder=false}) {Text(text("取消","Cancel"))}})
+    if(renameEmptyFolder) AlertDialog(onDismissRequest={renameEmptyFolder=false},title={Text(text("重命名文件夹","Rename folder"))},text={Column { OutlinedTextField(folderName,{folderName=it;folderError=null},label={Text(text("文件夹名称","Folder name"))},singleLine=true);folderError?.let { Text(it,color=LingyeColors.ErrorInk) } }},confirmButton={TextButton(onClick={val old=folderFilter;val leaf=folderName.trim();val parentPrefix=old?.let { if ('/' in it) it.substringBeforeLast('/') else "" }.orEmpty();val name=if(parentPrefix.isEmpty()) leaf else "$parentPrefix/$leaf";val affected=if(old.isNullOrEmpty()) emptyList() else folders.filter { it==old || it.startsWith("$old/") };val newNames=if(old.isNullOrEmpty()) emptyList() else affected.map { name + it.removePrefix(old) };when { old.isNullOrEmpty()->renameEmptyFolder=false; failedPages.isNotEmpty() -> folderError=text("有页面无法读取，无法安全修改文件夹。","Some pages could not be read; folder changes are unavailable."); leaf.isEmpty() || leaf.contains('/') || !FolderCatalog.valid(name)->folderError=text("请输入 1–100 个字符且不含斜杠的名称","Enter a 1–100 character name without slashes"); newNames.any { candidate -> folders.any { it !in affected && it.equals(candidate,true) } }->folderError=text("文件夹名称已存在","That folder name already exists"); else->try { check(saveCurrent());var next=folders.toList();affected.forEachIndexed { index, folder -> val renamed=newNames[index];next=store.moveFolderContents(folder,renamed,pages.toList(),next);pages.filter { folder in it.folders }.forEach { it.folders.remove(folder); it.folders.add(renamed) } };folders.clear();folders.addAll(next);folderFilter=name;expandedFolders=expandedFolders.map { if(it==old || it.startsWith("$old/")) name + it.removePrefix(old) else it }.toSet();revision++;savedRevision=revision;renameEmptyFolder=false } catch(e:Exception) { folderError=failure("重命名失败","Rename failed",e) } } }) {Text(text("保存","Save"))}},dismissButton={TextButton(onClick={renameEmptyFolder=false}) {Text(text("取消","Cancel"))}})
     if (trashSelectionDialog) {
         val trashedPages = pages.filter { it.trashed }.sortedBy { it.title.lowercase() }
         Dialog(
@@ -2656,14 +2924,113 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
             )
         }
     }
-    if (createFolder) AlertDialog(onDismissRequest = { createFolder = false }, title = { Text(text("新建文件夹","New folder")) }, text = {
-        Column { OutlinedTextField(folderName, { folderName = it; folderError = null }, label = { Text(text("文件夹名称","Folder name")) }, singleLine = true); folderError?.let { Text(it, color = LingyeColors.ErrorInk) } }
+    if (createFolder) AlertDialog(onDismissRequest = { createFolder = false }, title = { Text(if (folderParent == null) text("新建文件夹","New folder") else text("新建子文件夹","New subfolder")) }, text = {
+        Column { OutlinedTextField(folderName, { folderName = it; folderError = null }, label = { Text(text("文件夹名称","Folder name")) }, singleLine = true); folderParent?.let { Text(text("父文件夹：","Parent: ") + it, color = LingyeColors.Muted, fontSize = 12.sp) }; folderError?.let { Text(it, color = LingyeColors.ErrorInk) } }
     }, confirmButton = { TextButton(onClick = {
-        val name = folderName.trim()
-        if (!FolderCatalog.valid(name)) folderError = text("请输入 1–100 个字符的名称","Enter a name with 1–100 characters")
-        else if (folders.any { it.equals(name, ignoreCase = true) }) folderError = text("文件夹名称已存在","That folder name already exists")
-        else try { val next = folders.toList() + name; store.saveFolders(next); folders.add(name); expandedFolders = expandedFolders + name; folderFilter = null; trashMode = false; favoriteMode = false; createFolder = false } catch (e: Exception) { folderError = "${text("保存失败","Save failed")}：${localizedError(language,e)}" }
+        val leaf = folderName.trim()
+        val name = folderParent?.let { "$it/$leaf" } ?: leaf
+        when {
+            leaf.isEmpty() || leaf.contains('/') || !FolderCatalog.valid(name) -> folderError = text("请输入 1–100 个字符且不含斜杠的名称","Enter a 1–100 character name without slashes")
+            folders.any { it.equals(name, ignoreCase = true) } -> folderError = text("文件夹名称已存在","That folder name already exists")
+            else -> try { val next = folders.toList() + name; store.saveFolders(next); folders.add(name); expandedFolders = expandedFolders + name; folderParent?.let { expandedFolders = expandedFolders + it }; folderFilter = null; trashMode = false; favoriteMode = false; createFolder = false } catch (e: Exception) { folderError = "${text("保存失败","Save failed")}：${localizedError(language,e)}" }
+        }
     }) { Text(text("创建","Create")) } }, dismissButton = { TextButton(onClick = { createFolder = false }) { Text(text("取消","Cancel")) } })
+    movePageTarget?.let { page ->
+        AlertDialog(
+            onDismissRequest = { movePageTarget = null },
+            title = { Text(text("移动页面","Move page")) },
+            text = {
+                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                    MenuRow(text("未分类","Unfiled"), {
+                        movePageTarget = null
+                        movePageToFolder(page, null)
+                    }, icon = AppIcon.PAGES)
+                    folders.sorted().forEach { folder ->
+                        MenuRow(folder, {
+                            movePageTarget = null
+                            movePageToFolder(page, folder)
+                            expandedFolders = expandedFolders + folder
+                        }, icon = AppIcon.FOLDER)
+                    }
+                    HorizontalDivider(Modifier.padding(vertical = 5.dp), color = LingyeColors.Line)
+                    MenuRow(text("移动到回收站","Move to trash"), {
+                        movePageTarget = null
+                        trashPage(page)
+                    }, icon = AppIcon.TRASH, danger = true)
+                }
+            },
+            confirmButton = { TextButton(onClick = { movePageTarget = null }) { Text(text("取消","Cancel")) } }
+        )
+    }
+    moveFolderTarget?.let { folder ->
+        AlertDialog(
+            onDismissRequest = { moveFolderTarget = null },
+            title = { Text(text("移动文件夹","Move folder")) },
+            text = {
+                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                    MenuRow(text("移到根目录","Move to root"), {
+                        moveFolderTarget = null
+                        moveFolderToParent(folder, null)
+                    }, icon = AppIcon.FOLDER)
+                    folders.filter { it != folder && !it.startsWith("$folder/") }.sorted().forEach { parent ->
+                        MenuRow(parent, {
+                            moveFolderTarget = null
+                            moveFolderToParent(folder, parent)
+                        }, icon = AppIcon.FOLDER)
+                    }
+                    HorizontalDivider(Modifier.padding(vertical = 5.dp), color = LingyeColors.Line)
+                    MenuRow(text("移动到回收站","Move to trash"), {
+                        moveFolderTarget = null
+                        trashFolder(folder)
+                    }, icon = AppIcon.TRASH, danger = true)
+                }
+            },
+            confirmButton = { TextButton(onClick = { moveFolderTarget = null }) { Text(text("取消","Cancel")) } }
+        )
+    }
+    addPagesFolder?.let { folder ->
+        val candidates = pages.filter { !it.trashed && folder !in it.folders }.sortedBy { it.title.lowercase() }
+        AlertDialog(
+            onDismissRequest = { addPagesFolder = null },
+            title = { Text(text("添加其他文档","Add other documents")) },
+            text = {
+                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                    Text(folder.substringAfterLast('/'), color = LingyeColors.Muted, fontSize = 12.sp)
+                    if (candidates.isEmpty()) Text(text("没有可添加的文档","No documents available"), Modifier.padding(vertical = 12.dp))
+                    candidates.forEach { page ->
+                        Row(Modifier.fillMaxWidth().clickable {
+                            addPagesSelection = if (page.id in addPagesSelection) addPagesSelection - page.id else addPagesSelection + page.id
+                        }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(page.id in addPagesSelection, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(page.title.ifBlank { text("未命名页面","Untitled page") }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = addPagesSelection.isNotEmpty(), onClick = {
+                    if (!saveCurrent()) return@TextButton
+                    val changedPages = mutableListOf<Page>()
+                    try {
+                        pages.filter { it.id in addPagesSelection }.forEach { page ->
+                            page.folders.add(folder)
+                            repository.save(page)
+                            changedPages.add(page)
+                        }
+                        revision++
+                        savedRevision = revision
+                        notice = text("文档已加入文件夹","Documents added to folder")
+                        addPagesFolder = null
+                    } catch (e: Exception) {
+                        changedPages.forEach { it.folders.remove(folder) }
+                        error = failure("添加失败","Add failed",e)
+                    }
+                }) { Text(text("添加","Add")) }
+            },
+            dismissButton = { TextButton(onClick = { addPagesFolder = null }) { Text(text("取消","Cancel")) } }
+        )
+    }
     if (tagEditor && current != null) {
         val draftTags = tagDraft.split(',', '，').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         val invalidTags = draftTags.filterNot(TagCatalog::valid)

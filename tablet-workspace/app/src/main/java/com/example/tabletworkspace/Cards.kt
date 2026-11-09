@@ -24,7 +24,7 @@ fun Page.addCard(
     cornerRadius: Float = 12f,
     borderStyle: String = "solid",
     borderWidth: Float = 1f,
-    shadowStyle: String = "box"
+    shadowStyle: String = "paper"
 ) {
  val content = preset.content(language)
  shapes.add(
@@ -53,17 +53,21 @@ fun Page.addTextBox(
     height: Float = 120f,
     textColor: Int = 0xff20293a.toInt(),
     fontSize: Float = 16f,
-    textAlign: String = "left"
+    textAlign: String = "left",
+    fontFamily: String = "sans",
+    fontStyle: String = "normal",
+    fontWeight: Int = 400
 ) {
     shapes.add(
         Shape(
             "text", x, y, width, height,
             color = if (LingyeColors.dark) 0xff252525.toInt() else 0xffffffff.toInt(),
             title = "", body = text,
-            shadowStyle = "box",
+            shadowStyle = "paper",
             borderStyle = "none", borderWidth = 0f, cornerRadius = 8f,
             textColor = if (LingyeColors.dark && textColor == 0xff20293a.toInt()) 0xffeaeaea.toInt() else textColor,
-            fontSize = fontSize, textAlign = textAlign
+            fontSize = fontSize, textAlign = textAlign,
+            fontFamily = fontFamily, fontStyle = fontStyle, fontWeight = fontWeight
         )
     )
 }
@@ -74,7 +78,11 @@ fun Page.addCanvasTextBlock(
     language: AppLanguage,
     textColor: Int = 0xff20293a.toInt(),
     width: Float? = null,
-    height: Float? = null
+    height: Float? = null,
+    textAlign: String = "left",
+    fontFamily: String = "sans",
+    fontStyle: String = "normal",
+    fontWeight: Int = 400
 ) {
     val headingLevel = Regex("h([1-6])").matchEntire(kind)?.groupValues?.get(1)?.toInt()
     val fontSize = when (headingLevel) {
@@ -102,7 +110,11 @@ fun Page.addCanvasTextBlock(
         width = width ?: if (headingLevel != null) 320f else 260f,
         height = height ?: if (headingLevel != null) 72f else 120f,
         textColor = textColor,
-        fontSize = fontSize
+        fontSize = fontSize,
+        textAlign = textAlign,
+        fontFamily = fontFamily,
+        fontStyle = fontStyle,
+        fontWeight = fontWeight
     )
 }
 fun Page.checkNextTodoItem(index: Int): Boolean {

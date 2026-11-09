@@ -35,9 +35,12 @@ data class WorkspaceSettings(
     val defaultTextColor: Int = 0xff20293a.toInt(),
     val defaultTextSize: Float = 16f,
     val defaultTextAlign: String = "left",
+    val defaultTextFontFamily: String = "sans",
+    val defaultTextFontStyle: String = "normal",
+    val defaultTextFontWeight: Int = 400,
     val noteBackground: Int = 0xfff2f5ff.toInt(),
     val noteCorner: String = "medium",
-    val noteShadow: String = "box",
+    val noteShadow: String = "paper",
     val noteBorderStyle: String = "solid",
     val noteBorderWidth: Float = 1f,
     val showZoomButtons: Boolean = true,
@@ -49,9 +52,19 @@ data class WorkspaceSettings(
     val canvasBackground: Int = 0xffffffff.toInt(),
     val cardColor: Int = 0xfff2f5ff.toInt(),
     val shapeColor: Int = 0xffffd866.toInt(),
+    val shapeBorderColor: Int = 0xffd9deec.toInt(),
+    val shapeBorderStyle: String = "solid",
+    val shapeBorderWidth: Float = 1f,
+    val shapeTextColor: Int = 0xff20293a.toInt(),
+    val shapeTextSize: Float = 20f,
+    val shapeTextAlign: String = "left",
+    val shapeFontFamily: String = "sans",
+    val shapeFontStyle: String = "normal",
+    val shapeFontWeight: Int = 400,
     val connectorColor: Int = 0xff62748a.toInt(),
     val connectorWidth: Float = 4f,
     val connectorPathStyle: String = "curve",
+    val connectorStartMarker: String = "none",
     val connectorEndMarker: String = "arrow"
 ) {
     val gridStep: Float
@@ -80,31 +93,47 @@ data class WorkspaceSettings(
         canvasTheme = canvasTheme.takeIf { it in CANVAS_THEMES } ?: "light",
         defaultTextSize = defaultTextSize.coerceIn(12f, 32f),
         defaultTextAlign = defaultTextAlign.takeIf { it in TEXT_ALIGNS } ?: "left",
+        defaultTextFontFamily = defaultTextFontFamily.takeIf { it in CANVAS_FONT_FAMILIES } ?: "sans",
+        defaultTextFontStyle = defaultTextFontStyle.takeIf { it in CANVAS_FONT_STYLES } ?: "normal",
+        defaultTextFontWeight = defaultTextFontWeight.takeIf { it in CANVAS_FONT_WEIGHTS } ?: 400,
+        shapeBorderStyle = shapeBorderStyle.takeIf { it in BORDER_STYLES } ?: "solid",
+        shapeBorderWidth = shapeBorderWidth.coerceIn(0f, 12f),
+        shapeTextSize = shapeTextSize.coerceIn(8f, 96f),
+        shapeTextAlign = shapeTextAlign.takeIf { it in TEXT_ALIGNS } ?: "left",
+        shapeFontFamily = shapeFontFamily.takeIf { it in CANVAS_FONT_FAMILIES } ?: "sans",
+        shapeFontStyle = shapeFontStyle.takeIf { it in CANVAS_FONT_STYLES } ?: "normal",
+        shapeFontWeight = shapeFontWeight.takeIf { it in CANVAS_FONT_WEIGHTS } ?: 400,
         noteCorner = noteCorner.takeIf { it in NOTE_CORNERS } ?: "medium",
-        noteShadow = noteShadow.takeIf { it in NOTE_SHADOWS } ?: "box",
+        noteShadow = noteShadow.takeIf { it in NOTE_SHADOWS } ?: "paper",
         noteBorderStyle = noteBorderStyle.takeIf { it in setOf("solid", "dashed", "none") } ?: "solid",
         noteBorderWidth = noteBorderWidth.coerceIn(2f, 12f),
         workspaceName = workspaceName.trim().ifBlank { "灵页" }.take(40),
         workspaceSubtitle = workspaceSubtitle.trim().ifBlank { "离线创意空间" }.take(60),
         connectorWidth = connectorWidth.coerceIn(1f, 8f),
         connectorPathStyle = connectorPathStyle.takeIf { it in CONNECTOR_PATH_STYLES } ?: "curve",
+        connectorStartMarker = connectorStartMarker.takeIf { it in CONNECTOR_MARKERS } ?: "none",
         connectorEndMarker = connectorEndMarker.takeIf { it in CONNECTOR_END_MARKERS } ?: "arrow"
     )
 
     companion object {
         val THEME_MODES = setOf("system", "light", "dark")
-        val CONNECTOR_PATH_STYLES = setOf("straight", "curve", "step")
+        val CONNECTOR_PATH_STYLES = EditorStyleCatalog.connectorPathStyles
+        val CONNECTOR_MARKERS = EditorStyleCatalog.connectorMarkers
         val CONNECTOR_END_MARKERS = setOf("dot", "arrow", "none")
         val EDITOR_FONT_FAMILIES = setOf("sans", "serif", "mono", "custom")
+        val CANVAS_FONT_FAMILIES = EditorStyleCatalog.fontFamilies
+        val CANVAS_FONT_STYLES = EditorStyleCatalog.fontStyles
+        val CANVAS_FONT_WEIGHTS = EditorStyleCatalog.fontWeights
+        val BORDER_STYLES = EditorStyleCatalog.borderStyles
+        val TEXT_ALIGNS = EditorStyleCatalog.textAligns
         val GRID_SIZES = setOf("small", "medium", "large")
         val DATE_TITLE_FORMATS = setOf(
             "dayMonthYear", "monthDayYear", "yearMonthDay", "journal",
             "iso", "slash", "monthDay", "chinese"
         )
         val CANVAS_THEMES = setOf("auto", "light", "dark")
-        val TEXT_ALIGNS = setOf("left", "center", "right")
         val NOTE_CORNERS = setOf("none", "small", "medium", "large", "huge")
-        val NOTE_SHADOWS = setOf("none", "box", "sticker")
+        val NOTE_SHADOWS = EditorStyleCatalog.shadowStyles
     }
 }
 
@@ -181,9 +210,12 @@ fun WorkspacePreferenceStore.readWorkspaceSettings(legacyMotionEnabled: Boolean?
         defaultTextColor = int(KEY_DEFAULT_TEXT_COLOR, 0xff20293a.toInt()),
         defaultTextSize = float(KEY_DEFAULT_TEXT_SIZE, 16f),
         defaultTextAlign = string(KEY_DEFAULT_TEXT_ALIGN, "left").orEmpty(),
+        defaultTextFontFamily = string(KEY_DEFAULT_TEXT_FONT_FAMILY, "sans").orEmpty(),
+        defaultTextFontStyle = string(KEY_DEFAULT_TEXT_FONT_STYLE, "normal").orEmpty(),
+        defaultTextFontWeight = int(KEY_DEFAULT_TEXT_FONT_WEIGHT, 400),
         noteBackground = int(KEY_NOTE_BACKGROUND, 0xfff2f5ff.toInt()),
         noteCorner = string(KEY_NOTE_CORNER, "medium").orEmpty(),
-        noteShadow = string(KEY_NOTE_SHADOW, "box").orEmpty(),
+        noteShadow = migrateNoteShadowDefault().orEmpty(),
         noteBorderStyle = string(KEY_NOTE_BORDER_STYLE, "solid").orEmpty(),
         noteBorderWidth = float(KEY_NOTE_BORDER_WIDTH, 1f),
         showZoomButtons = boolean(KEY_SHOW_ZOOM_BUTTONS, true),
@@ -196,11 +228,34 @@ fun WorkspacePreferenceStore.readWorkspaceSettings(legacyMotionEnabled: Boolean?
             .let { if (it == 0xfffdfdfd.toInt()) 0xffffffff.toInt() else it },
         cardColor = int(KEY_CARD_COLOR, 0xfff2f5ff.toInt()),
         shapeColor = int(KEY_SHAPE_COLOR, 0xffffd866.toInt()),
+        shapeBorderColor = int(KEY_SHAPE_BORDER_COLOR, 0xffd9deec.toInt()),
+        shapeBorderStyle = string(KEY_SHAPE_BORDER_STYLE, "solid").orEmpty(),
+        shapeBorderWidth = float(KEY_SHAPE_BORDER_WIDTH, 1f),
+        shapeTextColor = int(KEY_SHAPE_TEXT_COLOR, 0xff20293a.toInt()),
+        shapeTextSize = float(KEY_SHAPE_TEXT_SIZE, 20f),
+        shapeTextAlign = string(KEY_SHAPE_TEXT_ALIGN, "left").orEmpty(),
+        shapeFontFamily = string(KEY_SHAPE_FONT_FAMILY, "sans").orEmpty(),
+        shapeFontStyle = string(KEY_SHAPE_FONT_STYLE, "normal").orEmpty(),
+        shapeFontWeight = int(KEY_SHAPE_FONT_WEIGHT, 400),
         connectorColor = int(KEY_CONNECTOR_COLOR, 0xff62748a.toInt()),
         connectorWidth = float(KEY_CONNECTOR_WIDTH, 4f),
         connectorPathStyle = string(KEY_CONNECTOR_PATH_STYLE, "curve").orEmpty(),
+        connectorStartMarker = string(KEY_CONNECTOR_START_MARKER, "none").orEmpty(),
         connectorEndMarker = string(KEY_CONNECTOR_END_MARKER, "arrow").orEmpty()
     ).normalized()
+
+/**
+ * Earlier builds wrote the old "box" default into preferences as soon as any setting changed.
+ * Treat that stored value as the legacy default once, then keep whatever the user picks afterwards.
+ */
+private fun WorkspacePreferenceStore.migrateNoteShadowDefault(): String {
+    val stored = string(KEY_NOTE_SHADOW, "paper").orEmpty()
+    if (boolean(KEY_NOTE_SHADOW_MIGRATED, false)) return stored
+    val value = if (stored == "box") "paper" else stored
+    putString(KEY_NOTE_SHADOW, value)
+    putBoolean(KEY_NOTE_SHADOW_MIGRATED, true)
+    return value
+}
 
 fun WorkspacePreferenceStore.writeWorkspaceSettings(settings: WorkspaceSettings) {
     val value = settings.normalized()
@@ -227,6 +282,9 @@ fun WorkspacePreferenceStore.writeWorkspaceSettings(settings: WorkspaceSettings)
         put.int(KEY_DEFAULT_TEXT_COLOR, value.defaultTextColor)
         put.float(KEY_DEFAULT_TEXT_SIZE, value.defaultTextSize)
         put.string(KEY_DEFAULT_TEXT_ALIGN, value.defaultTextAlign)
+        put.string(KEY_DEFAULT_TEXT_FONT_FAMILY, value.defaultTextFontFamily)
+        put.string(KEY_DEFAULT_TEXT_FONT_STYLE, value.defaultTextFontStyle)
+        put.int(KEY_DEFAULT_TEXT_FONT_WEIGHT, value.defaultTextFontWeight)
         put.int(KEY_NOTE_BACKGROUND, value.noteBackground)
         put.string(KEY_NOTE_CORNER, value.noteCorner)
         put.string(KEY_NOTE_SHADOW, value.noteShadow)
@@ -241,9 +299,19 @@ fun WorkspacePreferenceStore.writeWorkspaceSettings(settings: WorkspaceSettings)
         put.int(KEY_CANVAS_BACKGROUND, value.canvasBackground)
         put.int(KEY_CARD_COLOR, value.cardColor)
         put.int(KEY_SHAPE_COLOR, value.shapeColor)
+        put.int(KEY_SHAPE_BORDER_COLOR, value.shapeBorderColor)
+        put.string(KEY_SHAPE_BORDER_STYLE, value.shapeBorderStyle)
+        put.float(KEY_SHAPE_BORDER_WIDTH, value.shapeBorderWidth)
+        put.int(KEY_SHAPE_TEXT_COLOR, value.shapeTextColor)
+        put.float(KEY_SHAPE_TEXT_SIZE, value.shapeTextSize)
+        put.string(KEY_SHAPE_TEXT_ALIGN, value.shapeTextAlign)
+        put.string(KEY_SHAPE_FONT_FAMILY, value.shapeFontFamily)
+        put.string(KEY_SHAPE_FONT_STYLE, value.shapeFontStyle)
+        put.int(KEY_SHAPE_FONT_WEIGHT, value.shapeFontWeight)
         put.int(KEY_CONNECTOR_COLOR, value.connectorColor)
         put.float(KEY_CONNECTOR_WIDTH, value.connectorWidth)
         put.string(KEY_CONNECTOR_PATH_STYLE, value.connectorPathStyle)
+        put.string(KEY_CONNECTOR_START_MARKER, value.connectorStartMarker)
         put.string(KEY_CONNECTOR_END_MARKER, value.connectorEndMarker)
     }
 }
@@ -270,9 +338,13 @@ private const val KEY_ROUGH_CONNECTORS = "rough_connectors"
 private const val KEY_DEFAULT_TEXT_COLOR = "default_text_color"
 private const val KEY_DEFAULT_TEXT_SIZE = "default_text_size"
 private const val KEY_DEFAULT_TEXT_ALIGN = "default_text_align"
+private const val KEY_DEFAULT_TEXT_FONT_FAMILY = "default_text_font_family"
+private const val KEY_DEFAULT_TEXT_FONT_STYLE = "default_text_font_style"
+private const val KEY_DEFAULT_TEXT_FONT_WEIGHT = "default_text_font_weight"
 private const val KEY_NOTE_BACKGROUND = "note_background"
 private const val KEY_NOTE_CORNER = "note_corner"
 private const val KEY_NOTE_SHADOW = "note_shadow"
+private const val KEY_NOTE_SHADOW_MIGRATED = "note_shadow_paper_default"
 private const val KEY_NOTE_BORDER_STYLE = "note_border_style"
 private const val KEY_NOTE_BORDER_WIDTH = "note_border_width"
 private const val KEY_SHOW_ZOOM_BUTTONS = "show_zoom_buttons"
@@ -284,7 +356,17 @@ private const val KEY_FRAME_COLOR = "frame_color"
 private const val KEY_CANVAS_BACKGROUND = "canvas_background"
 private const val KEY_CARD_COLOR = "card_color"
 private const val KEY_SHAPE_COLOR = "shape_color"
+private const val KEY_SHAPE_BORDER_COLOR = "shape_border_color"
+private const val KEY_SHAPE_BORDER_STYLE = "shape_border_style"
+private const val KEY_SHAPE_BORDER_WIDTH = "shape_border_width"
+private const val KEY_SHAPE_TEXT_COLOR = "shape_text_color"
+private const val KEY_SHAPE_TEXT_SIZE = "shape_text_size"
+private const val KEY_SHAPE_TEXT_ALIGN = "shape_text_align"
+private const val KEY_SHAPE_FONT_FAMILY = "shape_font_family"
+private const val KEY_SHAPE_FONT_STYLE = "shape_font_style"
+private const val KEY_SHAPE_FONT_WEIGHT = "shape_font_weight"
 private const val KEY_CONNECTOR_COLOR = "connector_color"
 private const val KEY_CONNECTOR_WIDTH = "connector_width"
 private const val KEY_CONNECTOR_PATH_STYLE = "connector_path_style"
+private const val KEY_CONNECTOR_START_MARKER = "connector_start_marker"
 private const val KEY_CONNECTOR_END_MARKER = "connector_end_marker"

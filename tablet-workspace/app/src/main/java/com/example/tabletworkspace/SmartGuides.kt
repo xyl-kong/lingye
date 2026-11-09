@@ -69,6 +69,45 @@ object SmartGuides {
 
     private data class AxisMatch(val delta: Float, val position: Float)
 
+    /** Nearest alignment for one moving edge; used while resizing a card. */
+    fun snapEdge(value: Float, others: List<CanvasBounds>, threshold: Float, vertical: Boolean): Pair<Float, Float>? {
+        if (threshold <= 0f) return null
+        var bestDelta = 0f
+        var bestPosition = 0f
+        var found = false
+        for (other in others) {
+            for (edge in edges(other, vertical)) {
+                val delta = edge - value
+                if (abs(delta) <= threshold && (!found || abs(delta) < abs(bestDelta) - EPS)) {
+                    bestDelta = delta
+                    bestPosition = edge
+                    found = true
+                }
+            }
+        }
+        return if (found) bestDelta to bestPosition else null
+    }
+
+    fun guideFor(vertical: Boolean, position: Float, bounds: CanvasBounds, others: List<CanvasBounds>): SnapGuide? {
+        val matched = others.filter { hasEdge(it, position, vertical) }
+        if (matched.isEmpty()) return null
+        return if (vertical) {
+            SnapGuide(
+                vertical = true,
+                position = position,
+                start = minOf(bounds.top, matched.minOf { it.top }),
+                end = maxOf(bounds.bottom, matched.maxOf { it.bottom })
+            )
+        } else {
+            SnapGuide(
+                vertical = false,
+                position = position,
+                start = minOf(bounds.left, matched.minOf { it.left }),
+                end = maxOf(bounds.right, matched.maxOf { it.right })
+            )
+        }
+    }
+
     private fun bestMatch(
         movingEdges: List<Float>,
         others: List<CanvasBounds>,

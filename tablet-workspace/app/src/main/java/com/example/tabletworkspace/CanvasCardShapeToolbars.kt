@@ -100,6 +100,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.*
 
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasCardToolbar(
     index: Int?, visible: Boolean, page: Page, language: AppLanguage, scale: Float, viewport: Viewport,
@@ -160,11 +161,16 @@ internal fun CanvasCardToolbar(
                                     HorizontalDivider(Modifier.padding(vertical=4.dp), color=LingyeColors.Line)
                                     MenuSectionLabel(tr(language,"笔记样式","Note style"))
                                     MenuSectionLabel(tr(language,"阴影","Shadow"))
-                                    listOf(
-                                        "none" to tr(language,"无阴影","No shadow"),
-                                        "box" to tr(language,"卡片阴影","Card shadow"),
-                                        "sticker" to tr(language,"贴纸阴影","Sticker shadow")
-                                    ).forEach { (value,label) ->
+                                    EditorStyleCatalog.shadowStyles.map { value ->
+                                        value to when (value) {
+                                            "none" -> tr(language,"无阴影","No shadow")
+                                            "box" -> tr(language,"卡片阴影","Card shadow")
+                                            "sticker" -> tr(language,"贴纸阴影","Sticker shadow")
+                                            "paper" -> tr(language,"纸张阴影","Paper shadow")
+                                            "float" -> tr(language,"浮起阴影","Float shadow")
+                                            else -> tr(language,"胶片阴影","Film shadow")
+                                        }
+                                    }.forEach { (value,label) ->
                                         MenuCheckItem(label, shape.shadowStyle == value) {
                                             CanvasPropertyEditor.updateShape(page,index,onChanged){ it.copy(shadowStyle=value) };layerMenu=false
                                         }
@@ -202,6 +208,7 @@ internal fun CanvasCardToolbar(
         }
 }
 
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasShapeToolbar(
     index: Int?, visible: Boolean, page: Page, language: AppLanguage, scale: Float, viewport: Viewport,

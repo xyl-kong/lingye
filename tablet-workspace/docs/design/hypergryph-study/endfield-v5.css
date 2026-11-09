@@ -1,0 +1,185 @@
+/* Prototype chrome only. The canvas image and its content are untouched. */
+:root {
+  --signal: #eceb34;
+  --ink: #202422;
+  --paper: #f7f8f4;
+  --muted: #58625e;
+  --stroke: #b8c0b9;
+  --ease: cubic-bezier(.2,.75,.3,1);
+}
+
+.sidebar {
+  background:
+    linear-gradient(90deg, transparent calc(100% - 10px), #e9ece5 calc(100% - 10px)),
+    var(--paper);
+}
+.sidebar::after { width: 9px; opacity: .5; }
+.brand { align-items: center; border-bottom-color: var(--stroke); }
+.brand::after {
+  content: "01 / LOCAL";
+  position: absolute;
+  right: 14px;
+  bottom: 9px;
+  font: 700 9px/1 ui-monospace, Consolas, monospace;
+  letter-spacing: .08em;
+  color: #56615a;
+}
+.brand strong { font-weight: 800; }
+.brand small { letter-spacing: .06em; }
+.mark { border: 1px solid #abb3ac; border-radius: 1px; }
+.side-search { color: #3d4742; font-weight: 600; }
+.side-plus { margin-right: -7px; border-left: 1px solid #bec7be; }
+.side-row { grid-template-columns: 34px 1fr 34px; }
+.side-row .icon { display: grid; place-items: center; font-size: 18px; }
+.side-row.current {
+  clip-path: none;
+  box-shadow: inset 5px 0 var(--signal);
+  padding-left: 13px;
+}
+.side-row.current::before { display: none; }
+.side-row.current .icon { color: var(--signal); }
+.side-row[data-selected="true"] {
+  background: #e9ecdd;
+  box-shadow: inset 3px 0 #323b34;
+}
+.side-row.current[data-selected="true"] { background: var(--ink); box-shadow: inset 5px 0 var(--signal); }
+.pages { border-top-color: #adb8ae; }
+.pages::before {
+  content: "RECENT / 05";
+  display: block;
+  margin: -3px 0 7px 10px;
+  color: #626d65;
+  font: 700 10px ui-monospace, Consolas, monospace;
+  letter-spacing: .1em;
+}
+.pages .side-row { border-left: 2px solid transparent; }
+.pages .side-row[data-selected="true"] { border-left-color: var(--ink); }
+.settings-side { border-top-color: #aeb9af; }
+.header { box-shadow: inset 0 4px var(--signal), 0 1px 0 #fff; }
+.header h1 { font-weight: 800; }
+.header h1::before { top: 6px; }
+.save {
+  border-left: 1px solid #aeb7af;
+  padding-left: 13px;
+  color: #414c45;
+}
+.save::before { content: "■"; font-size: 8px; }
+.mode { border-width: 1px; padding: 3px; }
+.mode button { font-weight: 700; }
+.mode button.on { box-shadow: inset 0 -3px var(--signal); }
+.mode button.on::after { display: none; }
+.head-action, .tool { display: grid; place-items: center; }
+.head-action:hover, .tool:hover { box-shadow: inset 0 -2px #333d35; }
+.head-action:active, .tool:active { transform: translateY(1px); box-shadow: inset 0 -3px var(--ink); }
+.tool.on { box-shadow: inset 0 -3px var(--signal); }
+.tool.on::before { display: none; }
+.tool[data-pending="true"] {
+  background: var(--signal);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.tool[aria-disabled="true"] { opacity: .4; pointer-events: none; }
+.tool[data-tip]:hover::after,
+.tool[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 9px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 9px;
+  min-width: max-content;
+  background: #202722;
+  border-bottom: 2px solid var(--signal);
+  color: white;
+  font: 600 12px/1.3 system-ui, sans-serif;
+  z-index: 20;
+  pointer-events: none;
+}
+.cover-context, .cover-bottom { transition: box-shadow .15s var(--ease); }
+.cover-context:focus-within, .cover-bottom:focus-within { box-shadow: 4px 5px 0 #b9c6ba; }
+.cover-context::before {
+  content: "OBJECT / 01";
+  position: absolute;
+  left: 8px;
+  top: -18px;
+  color: #343d35;
+  font: 700 9px/1 ui-monospace, Consolas, monospace;
+  letter-spacing: .08em;
+}
+.cover-bottom::before {
+  content: "TOOLS";
+  position: absolute;
+  right: 9px;
+  top: -16px;
+  font: 700 9px/1 ui-monospace, Consolas, monospace;
+  letter-spacing: .1em;
+  color: #464f46;
+}
+.menu { overflow: hidden; }
+.menu button { display: grid; grid-template-columns: 24px 1fr 14px; align-items: center; }
+.menu button .hint { text-align: right; }
+.menu button[aria-selected="true"] { background: #e7e9d9; box-shadow: inset 3px 0 var(--ink); }
+.controlstrip {
+  border: 1px solid #111;
+  box-shadow: inset 0 2px var(--signal);
+  font-family: ui-monospace, Consolas, monospace;
+}
+.controlstrip b { color: var(--signal); }
+
+.property-panel {
+  position: absolute;
+  left: 440px;
+  top: 189px;
+  z-index: 11;
+  width: 320px;
+  padding: 0 12px 12px;
+  border: 1px solid #69756b;
+  border-top: 3px solid var(--ink);
+  background: #fafbf7;
+  box-shadow: 5px 6px 0 #ccd5cb;
+  display: none;
+  color: var(--ink);
+}
+.property-panel.open { display: block; animation: panel-enter .16s var(--ease) both; }
+.property-heading {
+  display: flex;
+  align-items: center;
+  height: 41px;
+  border-bottom: 1px solid #c7cec6;
+  font-size: 13px;
+  font-weight: 800;
+}
+.property-heading::before {
+  content: "02 /";
+  margin-right: 8px;
+  color: #677168;
+  font: 700 10px ui-monospace, Consolas, monospace;
+}
+.property-heading button {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.property-options { display: flex; flex-wrap: wrap; gap: 7px; padding-top: 12px; }
+.property-options button {
+  min-width: 42px;
+  min-height: 38px;
+  border: 1px solid #aab5aa;
+  background: white;
+  color: var(--ink);
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.property-options button:hover { border-color: var(--ink); box-shadow: inset 0 -2px var(--signal); }
+.property-options button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: white; box-shadow: inset 0 -3px var(--signal); }
+.property-options button:focus-visible,
+.property-heading button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.property-options .swatch { display: inline-block; width: 14px; height: 14px; margin-right: 6px; border: 1px solid #777; vertical-align: -2px; }
+.property-note { padding-top: 10px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+@keyframes panel-enter { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .property-panel.open { animation: none; } }

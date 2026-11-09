@@ -578,7 +578,9 @@ fun CompactSlider(
     modifier: Modifier = Modifier,
     steps: Int = 0,
     enabled: Boolean = true,
-    contentDescription: String? = null
+    contentDescription: String? = null,
+    trackHeight: Dp = 3.dp,
+    thumbRadius: Dp = 5.dp
 ) {
     require(valueRange.start < valueRange.endInclusive) { "滑块范围无效" }
     val latestOnChange by rememberUpdatedState(onValueChange)
@@ -631,28 +633,28 @@ fun CompactSlider(
             }
     ) {
         val inset = 8.dp.toPx()
-        val trackHeight = 3.dp.toPx()
+        val drawnTrackHeight = trackHeight.toPx()
         val y = size.height / 2f
         val usable = (size.width - 2 * inset).coerceAtLeast(1f)
         val fraction = ((coerced - valueRange.start) / (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
         val alpha = if (enabled) 1f else 0.45f
         drawRoundRect(
             LingyeColors.SliderTrack.copy(alpha = alpha),
-            topLeft = Offset(inset, y - trackHeight / 2f),
-            size = Size(usable, trackHeight),
-            cornerRadius = CornerRadius(trackHeight / 2f)
+            topLeft = Offset(inset, y - drawnTrackHeight / 2f),
+            size = Size(usable, drawnTrackHeight),
+            cornerRadius = CornerRadius(drawnTrackHeight / 2f)
         )
         if (fraction > 0f) {
             drawRoundRect(
                 LingyeColors.Primary.copy(alpha = alpha),
-                topLeft = Offset(inset, y - trackHeight / 2f),
-                size = Size(usable * fraction, trackHeight),
-                cornerRadius = CornerRadius(trackHeight / 2f)
+                topLeft = Offset(inset, y - drawnTrackHeight / 2f),
+                size = Size(usable * fraction, drawnTrackHeight),
+                cornerRadius = CornerRadius(drawnTrackHeight / 2f)
             )
         }
         drawCircle(
             LingyeColors.Primary.copy(alpha = alpha),
-            radius = 5.dp.toPx(),
+            radius = thumbRadius.toPx(),
             center = Offset(inset + usable * fraction, y)
         )
     }

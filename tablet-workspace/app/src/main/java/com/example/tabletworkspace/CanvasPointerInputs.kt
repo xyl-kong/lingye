@@ -271,7 +271,7 @@ internal fun Modifier.canvasGestureInput(
                 val snapTargets = if (selectedItems.isEmpty()) listOfNotNull(selection) else selectedItems
                 val snapStart = if (resizeAnchor == null && endpointDrag == null && boxStart == null) page.selectionBounds(snapTargets) else null
                 dragSnapStart = snapStart
-                dragSnapOthers = if (snapStart != null) page.snapTargetBounds(snapTargets) else emptyList()
+                dragSnapOthers = if (snapStart != null || resizeAnchor != null) page.snapTargetBounds(snapTargets) else emptyList()
                 dragSnapAccum = Point(0f, 0f)
                 snapGuides = emptyList()
             }, onDragEnd = {
@@ -324,7 +324,31 @@ internal fun Modifier.canvasGestureInput(
                     if (anchor != null) {
                         val current=world(event.position)
                         val snapshot=resizeSnapshot
-                        if (snapshot != null) page.applyFreeResize(snapshot,Point(current.x-resizeGrabOffset.x,current.y-resizeGrabOffset.y),resizeAxis)
+                        if (snapshot != null) {
+                            var pointer=Point(current.x-resizeGrabOffset.x,current.y-resizeGrabOffset.y)
+                            val others=dragSnapOthers
+                            var snappedX: Float? = null
+                            var snappedY: Float? = null
+                            if (others.isNotEmpty()) {
+                                val threshold=8f/scale
+                                if (resizeAxis!="y") {
+                                    SmartGuides.snapEdge(pointer.x,others,threshold,vertical=true)?.let { (delta,position) ->
+                                        pointer=Point(pointer.x+delta,pointer.y); snappedX=position
+                                    }
+                                }
+                                if (resizeAxis!="x") {
+                                    SmartGuides.snapEdge(pointer.y,others,threshold,vertical=false)?.let { (delta,position) ->
+                                        pointer=Point(pointer.x,pointer.y+delta); snappedY=position
+                                    }
+                                }
+                            }
+                            page.applyFreeResize(snapshot,pointer,resizeAxis)
+                            val bounds=page.selectionBounds(targets) ?: snapshot.bounds
+                            snapGuides=buildList {
+                                snappedX?.let { SmartGuides.guideFor(true,it,bounds,others)?.let(::add) }
+                                snappedY?.let { SmartGuides.guideFor(false,it,bounds,others)?.let(::add) }
+                            }
+                        }
                     } else {
                         val step = Point(delta.x / density / scale, delta.y / density / scale)
                         val start = dragSnapStart
@@ -385,7 +409,7 @@ internal fun Modifier.canvasGestureInput(
                             } else {
                                 val draft = connectorDraft
                                 if (draft != null && moved) {
-                                    page.addConnector(draft.start.x, draft.start.y, draft.end.x, draft.end.y, settings.connectorColor, settings.connectorPathStyle, settings.connectorEndMarker, width = settings.connectorWidth)
+                                    page.addConnector(draft.start.x, draft.start.y, draft.end.x, draft.end.y, settings.connectorColor, settings.connectorPathStyle, settings.connectorEndMarker, startMarker = settings.connectorStartMarker, width = settings.connectorWidth)
                                     val index = page.connectors.lastIndex
                                     draft.sourceShape?.let { page.bindConnectorEnd(index, true, it, draft.sourcePort) }
                                     if (draft.snapKind == ConnectorSnapKind.ANCHOR) {
@@ -410,7 +434,7 @@ internal fun Modifier.canvasGestureInput(
                                         val targetCenter = shapePort(page.shapes[hit], "center")
                                         val start = page.nearestPortOnShape(source, targetCenter)
                                         val end = page.nearestPortOnShape(hit, start.second)
-                                        page.addConnector(start.second.x, start.second.y, end.second.x, end.second.y, settings.connectorColor, settings.connectorPathStyle, settings.connectorEndMarker, width = settings.connectorWidth)
+                                        page.addConnector(start.second.x, start.second.y, end.second.x, end.second.y, settings.connectorColor, settings.connectorPathStyle, settings.connectorEndMarker, startMarker = settings.connectorStartMarker, width = settings.connectorWidth)
                                         val index = page.connectors.lastIndex
                                         page.bindConnectorEnd(index, true, source, start.first)
                                         page.bindConnectorEnd(index, false, hit, end.first)
@@ -435,7 +459,17 @@ internal fun Modifier.canvasGestureInput(
                 if (points.isNotEmpty()) { val a = points.first(); val b = points.last(); when (tool) {
                     "矩形", "圆角矩形", "圆形", "三角形", "菱形" -> page.addShape(
                         when (tool) { "圆形" -> "ellipse"; "圆角矩形" -> "roundRect"; "三角形" -> "triangle"; "菱形" -> "diamond"; else -> "rect" },
-                        min(a.x,b.x), min(a.y,b.y), abs(b.x-a.x).coerceAtLeast(12f), abs(b.y-a.y).coerceAtLeast(12f), settings.shapeColor
+                        min(a.x,b.x), min(a.y,b.y), abs(b.x-a.x).coerceAtLeast(12f), abs(b.y-a.y).coerceAtLeast(12f),
+                        color = settings.shapeColor,
+                        borderColor = settings.shapeBorderColor,
+                        borderStyle = settings.shapeBorderStyle,
+                        borderWidth = settings.shapeBorderWidth,
+                        textColor = settings.shapeTextColor,
+                        fontSize = settings.shapeTextSize,
+                        textAlign = settings.shapeTextAlign,
+                        fontFamily = settings.shapeFontFamily,
+                        fontStyle = settings.shapeFontStyle,
+                        fontWeight = settings.shapeFontWeight
                     )
                     "Frame" -> {
                         var width = abs(b.x-a.x).coerceAtLeast(120f)
@@ -459,12 +493,19 @@ internal fun Modifier.canvasGestureInput(
                                 width = width, height = height,
                                 textColor = settings.defaultTextColor,
                                 fontSize = settings.defaultTextSize,
-                                textAlign = settings.defaultTextAlign
+                                textAlign = settings.defaultTextAlign,
+                                fontFamily = settings.defaultTextFontFamily,
+                                fontStyle = settings.defaultTextFontStyle,
+                                fontWeight = settings.defaultTextFontWeight
                             )
                         } else {
                             page.addCanvasTextBlock(
                                 pendingTextKind, x, y, language, settings.defaultTextColor,
-                                width = width, height = height
+                                width = width, height = height,
+                                textAlign = settings.defaultTextAlign,
+                                fontFamily = settings.defaultTextFontFamily,
+                                fontStyle = settings.defaultTextFontStyle,
+                                fontWeight = settings.defaultTextFontWeight
                             )
                         }
                         val created = CanvasSelection("shape", page.shapes.lastIndex)

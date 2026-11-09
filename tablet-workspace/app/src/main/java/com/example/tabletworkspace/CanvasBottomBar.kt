@@ -197,8 +197,14 @@ internal fun BoxScope.CanvasBottomBar(
                            horizontalArrangement = Arrangement.spacedBy(2.dp),
                            verticalAlignment = Alignment.CenterVertically
                        ) {
-                           CanvasParameterChip(tr(language, "链接", "Link"), false, AppIcon.LINK, enabled = false) {}
-                           CanvasParameterChip(tr(language, "附件", "Attach"), false, AppIcon.BACKUP, enabled = false) {}
+                           CanvasParameterChip(tr(language, "链接", "Link"), false, AppIcon.LINK) {
+                               setTextToolsMenu(false)
+                               setLinkedDocPicker(true)
+                           }
+                           CanvasParameterChip(tr(language, "图片", "Image"), false, AppIcon.IMAGE) {
+                               setTextToolsMenu(false)
+                               addImage()
+                           }
                            CanvasToolbarDivider()
                            CanvasParameterChip(tr(language, "正文", "Body"), pendingTextKind == "body", AppIcon.TEXT) {
                                setPendingTextKind("body")

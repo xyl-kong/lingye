@@ -100,6 +100,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.*
 
+@androidx.compose.runtime.NonSkippableComposable
 @Composable
 internal fun CanvasConnectorToolbar(
     index: Int?,

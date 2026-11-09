@@ -52,7 +52,7 @@ class WorkspaceSettingsTest {
         ).normalized()
 
         assertEquals("medium", settings.noteCorner)
-        assertEquals("box", settings.noteShadow)
+        assertEquals("paper", settings.noteShadow)
         assertEquals("solid", settings.noteBorderStyle)
         assertEquals(12f, settings.noteBorderWidth, 0.001f)
         assertEquals(16f, settings.noteCornerRadius, 0.001f)

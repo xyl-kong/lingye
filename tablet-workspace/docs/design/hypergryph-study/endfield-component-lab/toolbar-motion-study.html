@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>画布工具栏 · 二十种组合动效对比</title>
+  <style>
+    :root{font-family:Inter,"Microsoft YaHei",sans-serif;color:#1d2220;background:#e8eae5;--ink:#1d2220;--lime:#e8ed56;--line:#b9c0b8}
+    *{box-sizing:border-box}body{margin:0}button{font:inherit}main{max-width:1370px;margin:auto;padding:30px 24px 70px}
+    header{background:#1d2220;color:#f7f8f2;padding:28px 32px;border-left:6px solid var(--lime)}
+    header small{color:var(--lime);font-size:11px;letter-spacing:.12em;font-weight:800}h1{font-size:clamp(25px,3vw,36px);margin:9px 0}header p{color:#c9d0ca;line-height:1.65;max-width:850px;margin:0;font-size:14px}
+    .controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:18px 0 21px}.controls button,.controls label{height:44px;border:1px solid #afb8af;background:#fff;border-radius:8px;padding:0 15px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:13px;cursor:pointer}.controls button:hover{background:#f5f7f2}.controls label{margin-left:auto;cursor:pointer}.controls input{accent-color:#344536;width:17px;height:17px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.experiment{min-width:0;background:#fafbf8;border:1px solid #c2c9c0;padding:22px 24px 20px}.experiment[hidden]{display:none}.index{font:800 11px ui-monospace,monospace;letter-spacing:.08em;color:#637065}.experiment h2{font-size:20px;margin:7px 0 5px}.experiment>p{margin:0;color:#647066;font-size:13px;line-height:1.6;min-height:42px}
+    .filters{display:flex;gap:7px;flex-wrap:wrap;margin:-3px 0 18px}.filters button{min-height:40px;padding:0 13px;border:1px solid #b9c3b8;background:#f8faf6;border-radius:7px;color:#263328;font-weight:700;font-size:12px;cursor:pointer}.filters button[aria-pressed=true]{background:#1d2220;color:#eff2e8;border-color:#1d2220}.filters button:focus-visible{outline:3px solid #4475d8;outline-offset:2px}
+    .stage{min-height:206px;display:flex;align-items:center;justify-content:center;position:relative;padding:25px 0}.bar{position:relative;display:grid;grid-template-columns:repeat(4,1fr);width:min(100%,590px);height:136px;border:3px solid var(--line);border-radius:17px;background:#fafbf9;padding:7px;isolation:isolate;touch-action:manipulation;box-shadow:0 1px 0 #fff inset}
+    .bar::before{content:"";position:absolute;left:8px;right:8px;top:8px;bottom:8px;background-image:radial-gradient(#707b70 .55px,transparent .8px);background-size:9px 9px;opacity:.04;pointer-events:none}
+    .plate,.ghost{position:absolute;z-index:0;top:8px;bottom:8px;left:8px;width:calc(25% - 4px);background:var(--ink);box-shadow:inset 0 -8px 13px #0e141326;overflow:hidden;pointer-events:none;will-change:left,width,clip-path}
+    .plate::before,.ghost::before{content:"";position:absolute;inset:0;background-image:radial-gradient(#e8ed56 0.7px,transparent 1px),radial-gradient(#a3b39c .6px,transparent 1px);background-size:8px 10px,13px 11px;background-position:1px 1px,6px 5px;opacity:.15}
+    .plate::after,.ghost::after{content:"";position:absolute;top:6px;bottom:6px;left:0;width:8px;background:var(--lime)}
+    .signal{position:absolute;top:6px;bottom:6px;left:0;width:8px;background:var(--lime);pointer-events:none}.grain{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(90deg,transparent 0 14px,#e8ed5640 14px 15px,transparent 15px 24px);opacity:0}.rail{position:absolute;z-index:2;bottom:3px;left:8px;width:calc(25% - 4px);height:3px;background:var(--lime);opacity:0;pointer-events:none}.frame-signal{position:absolute;inset:3px;border:2px solid var(--lime);opacity:0;pointer-events:none}
+    .bar button{position:relative;z-index:1;min-width:0;border:0;border-radius:9px;background:transparent;color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0;-webkit-tap-highlight-color:transparent}
+    .bar button::before{content:"";position:absolute;z-index:-1;width:62px;height:62px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:9px;background:#fafbf8;box-shadow:inset 0 0 0 1px #e1e6df;pointer-events:none}.bar button:hover::before{background:#f2f5ef}.bar button:active svg{transform:translateY(2px) scale(.96)}.bar:has(button:active) .plate{box-shadow:none!important}button:focus-visible,input:focus-visible{outline:3px solid #4475d8;outline-offset:3px}
+    .bar svg{width:42px;height:42px;stroke:currentColor;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;color:#1d2220;mix-blend-mode:normal;transition:transform 150ms cubic-bezier(.22,.7,.3,1)}.bar .select svg{stroke-width:0;fill:currentColor}.bar .dots svg{stroke-width:0;fill:currentColor}
+    .tooltip{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+    .plate,.ghost{box-shadow:inset 0 -8px 13px #0e141326}.experiment[data-motion="handoff"] .plate,.experiment[data-motion="handoff"] .ghost,.experiment[data-motion="detent"] .plate,.experiment[data-motion="shutter"] .plate{box-shadow:none}
+    .plate::after{opacity:0}.ghost::after{opacity:.7}
+    .details{display:flex;gap:10px;justify-content:space-between;border-top:1px solid #d7ded5;padding-top:12px;color:#58655c;font-size:12px;line-height:1.5}.details strong{color:#263328}.timeline{display:flex;gap:5px;margin:13px 0 0}.timeline span{height:3px;background:#c9d3c7;flex:1}.timeline span:first-child{background:#1d2220}.timeline span:last-child{background:var(--lime)}
+    .note{margin-top:18px;border-left:4px solid var(--lime);background:#f5f7f2;padding:15px 18px;color:#4f5e53;font-size:13px;line-height:1.65}.note strong{color:#1d2220}
+    .reduce-motion .bar *,.reduce-motion .plate{transition:none!important;animation:none!important}.reduce-motion .plate{will-change:auto}
+    @media (prefers-reduced-motion:reduce){.bar *,.plate{transition:none!important;animation:none!important}}
+    @media (max-width:850px){.grid{grid-template-columns:1fr}.controls label{margin-left:0}.bar{height:116px}.bar svg{width:34px;height:34px}.bar button::before{width:55px;height:55px}}
+    @media (max-width:520px){main{padding:14px 12px 36px}header{padding:22px 20px}.experiment{padding:19px 14px}.stage{min-height:158px;padding:18px 0}.bar{height:99px;border-radius:13px}.tooltip{display:none}}
+  </style>
+</head>
+<body>
+  <main>
+    <header><small>LINGYE / TOOLBAR MOTION STUDY 03</small><h1>同一工具栏 · 二十种组合动效</h1><p>保留圆角外框、深色纹理选中块、荧黄信号与四个工具图标。五种空间转换 × 四种状态确认形成 20 组；前四组延续上一版。所有图标始终保持黑色，并有独立浅色承托，选中片经过时仍可辨认。</p></header>
+    <div class="controls"><button id="compare" type="button">当前组同步切到画笔</button><button id="replay" type="button">重播当前组</button><button id="reset" type="button">重置到选择</button><label><input id="reduce" type="checkbox">关闭动效</label></div>
+    <nav class="filters" id="filters" aria-label="按转换机制筛选"></nav>
+    <section class="grid" id="grid" aria-label="二十种工具栏动效组合对比"></section>
+    <div class="note"><strong>交互说明：</strong>选中状态始终由深色块和荧黄标记表达。按压反馈只用图标轻微内移，不叠加按钮外阴影；B、C 的选中片也不使用外阴影。连续点击会中断前一段运动并转向新目标。更多按钮只演示选中反馈，不接入正式应用功能。关闭动效后立即切换。</div>
+  </main>
+  <script>
+    const icons=[
+      '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 7h28v7H19l20 20-6 6-20-20v16H7z"/></svg>',
+      '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m7 29 22-22 12 12-22 22-12-2zM13 23l12 12M29 7l12 12M7 29l-1 12 13 0"/></svg>',
+      '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 30c8-11 13-11 20-3s12 5 19-9M31 17l12 1-1 12"/></svg>',
+      '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="10" cy="24" r="3.3"/><circle cx="24" cy="24" r="3.3"/><circle cx="38" cy="24" r="3.3"/></svg>'
+    ];
+    const names=['选择','画笔','连线','更多'];
+    const variants=[
+      {id:'a',name:'A · 惯性停靠',desc:'按压内移、选中片轻微拉伸并沿轨道滑行，抵达时荧黄边标收稳。',spec:'560 ms · 拉伸 + 滑移 + 停靠',tag:'连续 / 高频适用'},
+      {id:'b',name:'B · 退光扫描',desc:'旧片先退光，目标片随后由左向右扫描显现；状态有连续交接。',spec:'610 ms · 退光 280 / 扫描 470',tag:'克制 / 无外阴影'},
+      {id:'c',name:'C · 柔性分档',desc:'先轻压，再经四次短促的缓动定位，末端以荧黄边标确认。',spec:'700 ms · 轻压 + 四档 + 确认',tag:'机械 / 无外阴影'},
+      {id:'d',name:'D · 流体桥接',desc:'选中片延展成柔软桥梁，纹理顺向流动，再收合到目标位置。',spec:'820 ms · 延展 + 流纹 + 收合',tag:'展示 / 重点模式'}
+    ];
+    const grid=document.getElementById('grid');
+    grid.innerHTML=variants.map(v=>`<article class="experiment variant-${v.id}" data-variant="${v.id}"><div class="index">EXPERIMENT / ${v.id.toUpperCase()}</div><h2>${v.name}</h2><p>${v.desc}</p><div class="stage"><div class="bar" role="toolbar" aria-label="${v.name}工具栏" style="--index:0"><span class="plate" aria-hidden="true"></span>${names.map((n,i)=>`<button type="button" class="${['select','pen','link','dots'][i]}" data-index="${i}" aria-label="${n}" aria-pressed="${i===0}">${icons[i]}<span class="tooltip">${n}</span></button>`).join('')}</div></div><div class="details"><span>${v.spec}</span><strong>${v.tag}</strong></div><div class="timeline" aria-hidden="true"><span></span><span></span><span></span><span></span></div></article>`).join('');
+    const bars=[...document.querySelectorAll('.bar')];
+    let replayTimers=[];
+    function stopReplay(){replayTimers.forEach(clearTimeout);replayTimers=[]}
+    function cellWidth(bar){return (bar.clientWidth-16)/4}
+    function cancelMotion(bar){
+      (bar._motion||[]).forEach(a=>a.cancel());bar._motion=[];
+      bar.querySelectorAll('.ghost').forEach(el=>el.remove());
+      bar.querySelector('.plate').classList.remove('moving');
+    }
+    function animate(bar,element,frames,options){const animation=element.animate(frames,{fill:'both',...options});(bar._motion??=[]).push(animation);return animation}
+    function setTool(bar,index){
+      const previous=Number(bar.dataset.index||0);
+      if(index===previous)return;
+      const plate=bar.querySelector('.plate');
+      const start=parseFloat(getComputedStyle(plate).left),startWidth=plate.getBoundingClientRect().width;
+      const startClip=getComputedStyle(plate).clipPath;
+      cancelMotion(bar);
+      const width=cellWidth(bar),end=8+index*width,distance=end-start,variant=bar.closest('.experiment').dataset.variant;
+      bar.dataset.index=String(index);plate.style.left=`${end}px`;
+      bar.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));
+      if(document.body.classList.contains('reduce-motion')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      plate.classList.add('moving');
+      let final;
+      if(variant==='a'){
+        final=animate(bar,plate,[
+          {left:`${start}px`,width:`${startWidth}px`,filter:'brightness(1)',offset:0},
+          {left:`${start+distance*.58}px`,width:`${width*1.09}px`,filter:'brightness(1.13)',offset:.55},
+          {left:`${end}px`,width:`${width}px`,filter:'brightness(1)',offset:1}
+        ],{duration:560,easing:'cubic-bezier(.34,.12,.17,1)'});
+      }else if(variant==='b'){
+        const ghost=document.createElement('span');ghost.className='plate ghost';ghost.style.left=`${start}px`;ghost.style.width=`${startWidth}px`;ghost.style.clipPath=startClip==='none'?'inset(0 0 0 0)':startClip;plate.after(ghost);
+        const leave=animate(bar,ghost,[{opacity:1,clipPath:ghost.style.clipPath,transform:'scale(.98)'},{opacity:.35,clipPath:'inset(0 15% 0 0)',transform:'scale(.94)',offset:.58},{opacity:0,clipPath:'inset(0 100% 0 0)',transform:'scale(.94)'}],{duration:280,easing:'cubic-bezier(.3,.1,.6,1)'});
+        leave.onfinish=()=>ghost.remove();
+        final=animate(bar,plate,[{clipPath:'inset(0 100% 0 0)',opacity:.7},{clipPath:'inset(0 8% 0 0)',opacity:1,offset:.78},{clipPath:'inset(0 0 0 0)',opacity:1}],{duration:470,delay:140,easing:'cubic-bezier(.23,.67,.3,1)'});
+      }else if(variant==='c'){
+        const stops=[0,.25,.25,.5,.5,.75,.75,1],at=[0,.19,.23,.43,.47,.67,.71,1];
+        final=animate(bar,plate,stops.map((p,i)=>({left:`${start+distance*p}px`,transform:i===0?'scaleY(.96)':'scaleY(1)',filter:i===6?'brightness(1.12)':'brightness(1)',offset:at[i],easing:'cubic-bezier(.26,.55,.36,1)'})),{duration:700});
+      }else{
+        const left=Math.min(start,end),span=Math.abs(distance)+Math.max(startWidth,width);
+        final=animate(bar,plate,[
+          {left:`${start}px`,width:`${startWidth}px`,borderRadius:'0px',offset:0},
+          {left:`${left+span*.04}px`,width:`${span*.91}px`,borderRadius:'11px',offset:.38},
+          {left:`${left}px`,width:`${span}px`,borderRadius:'7px',offset:.62},
+          {left:`${end}px`,width:`${width}px`,borderRadius:'0px',offset:1}
+        ],{duration:820,easing:'cubic-bezier(.35,.08,.17,1)'});
+      }
+      final.onfinish=()=>{final.cancel();plate.classList.remove('moving');bar._motion=[];bar.querySelectorAll('.ghost').forEach(el=>el.remove())};
+    }
+    grid.addEventListener('click',e=>{const button=e.target.closest('.bar button');if(!button)return;stopReplay();setTool(button.closest('.bar'),Number(button.dataset.index))});
+    document.getElementById('compare').addEventListener('click',()=>{stopReplay();bars.forEach(b=>setTool(b,1))});
+    function resetAll(){bars.forEach(b=>{cancelMotion(b);b.dataset.index='0';b.querySelector('.plate').style.left='8px';b.querySelectorAll('button').forEach((x,i)=>x.setAttribute('aria-pressed',String(i===0)))})}
+    document.getElementById('reset').addEventListener('click',()=>{stopReplay();resetAll()});
+    document.getElementById('replay').addEventListener('click',()=>{stopReplay();resetAll();[1,2,3,0].forEach((n,i)=>replayTimers.push(setTimeout(()=>bars.forEach(b=>setTool(b,n)),250+i*1100)))});
+    addEventListener('resize',()=>bars.forEach(b=>{cancelMotion(b);b.querySelector('.plate').style.left=`${8+Number(b.dataset.index||0)*cellWidth(b)}px`}));
+    const reduce=document.getElementById('reduce');reduce.checked=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function syncReduced(){document.body.classList.toggle('reduce-motion',reduce.checked);if(reduce.checked)bars.forEach(cancelMotion)}reduce.addEventListener('change',syncReduced);syncReduced();
+  </script>
+</body>
+</html>

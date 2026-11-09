@@ -22,11 +22,20 @@ class CanvasHitTestIndexTest {
     }
 
     @Test
-    fun frameIsHitOnItsBorderButNotItsInterior() {
+    fun frameIsHitOnItsBorderAndEmptyBody() {
         val page = Page.create("hit")
         page.addShape("frame", 0f, 0f, 200f, 150f)
         assertEquals(CanvasSelection("shape", 0), page.hitTest(Point(0f, 75f), 4f))
-        assertNull(page.hitTest(Point(100f, 75f), 4f))
+        assertEquals(CanvasSelection("shape", 0), page.hitTest(Point(100f, 75f), 4f))
+    }
+
+    @Test
+    fun childInsideFrameWinsOverFrameBody() {
+        val page = Page.create("hit")
+        page.addShape("frame", 0f, 0f, 200f, 150f)
+        page.addTextBox(40f, 40f, "inside", width = 40f, height = 30f)
+        assertEquals(CanvasSelection("shape", 1), page.hitTest(Point(60f, 60f), 4f))
+        assertEquals(CanvasSelection("shape", 0), page.hitTest(Point(170f, 100f), 4f))
     }
 
     @Test

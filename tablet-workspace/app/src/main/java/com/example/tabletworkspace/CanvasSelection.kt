@@ -6,6 +6,7 @@ import kotlin.math.*
 data class CanvasSelection(val type: String, val index: Int)
 fun Page.hitTest(point: Point, tolerance: Float): CanvasSelection? {
     var connectorHit: CanvasSelection? = null
+    var frameFallback: CanvasSelection? = null
     // Built once per hit instead of scanning every list for each layer id (formerly O(n²)).
     val indexById = HashMap<String, CanvasSelection>(strokeIds.size + shapes.size + images.size + connectors.size)
     strokeIds.forEachIndexed { i, id -> indexById[id] = CanvasSelection("stroke", i) }
@@ -17,7 +18,7 @@ fun Page.hitTest(point: Point, tolerance: Float): CanvasSelection? {
       when(item.type) {
        "stroke" -> { val pts=strokes[item.index];val radius=tolerance+strokeStyles[item.index].width/2; if(pts.any { hypot(point.x-it.x,point.y-it.y)<=radius } || pts.zipWithNext().any { (a,b)->val dx=b.x-a.x;val dy=b.y-a.y;val length=dx*dx+dy*dy;val t=if(length==0f) 0f else (((point.x-a.x)*dx+(point.y-a.y)*dy)/length).coerceIn(0f,1f);hypot(point.x-a.x-t*dx,point.y-a.y-t*dy)<=radius }) return item }
        "image" -> {val a=images[item.index];if(point.x>=a.x-tolerance && point.x<=a.x+a.width+tolerance && point.y>=a.y-tolerance && point.y<=a.y+a.height+tolerance) return item}
-       "shape" -> {val a=shapes[item.index];if(a.type=="frame") { if(FrameSemantics.hit(a,point,tolerance)) return item } else if(point.x>=a.x-tolerance && point.x<=a.x+a.width+tolerance && point.y>=a.y-tolerance && point.y<=a.y+a.height+tolerance) return item}
+       "shape" -> {val a=shapes[item.index];if(a.type=="frame") { if(point.x>=a.x-tolerance && point.x<=a.x+a.width+tolerance && point.y>=a.y-tolerance && point.y<=a.y+a.height+tolerance && frameFallback==null) frameFallback=item } else if(point.x>=a.x-tolerance && point.x<=a.x+a.width+tolerance && point.y>=a.y-tolerance && point.y<=a.y+a.height+tolerance) return item}
        "connector" -> {
            if (connectorHit == null) {
                val samples=ConnectorSampleCache.shared.samples(resolvedConnector(item.index, shapesById))
@@ -26,7 +27,7 @@ fun Page.hitTest(point: Point, tolerance: Float): CanvasSelection? {
        }
       }
     }
-    return connectorHit
+    return connectorHit ?: frameFallback
 }
 fun Page.moveSelection(selection: CanvasSelection, dx: Float, dy: Float) = moveSelections(listOf(selection), dx, dy)
 fun Page.deleteSelection(selection: CanvasSelection) {

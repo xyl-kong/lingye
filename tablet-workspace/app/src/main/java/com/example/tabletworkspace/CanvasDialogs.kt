@@ -124,6 +124,7 @@ internal fun CanvasDialogHost(
     var mindmapParentPicker by state.mindmapParentPicker
     var mindmapDeleteId by state.mindmapDeleteId
     var linkedDocPicker by state.linkedDocPicker
+    var linkedDocConvertIndex by state.linkedDocConvertIndex
     var frameNavigator by state.frameNavigator
     var frameRename by state.frameRename
     var frameTitleText by state.frameTitleText
@@ -204,7 +205,7 @@ internal fun CanvasDialogHost(
             val targets = pages.filter { it.id != page.id && !it.trashed }.sortedBy { it.title.lowercase() }
             val nextIndex = page.shapes.count { it.type == PageLinks.SHAPE_TYPE }
             AlertDialog(
-                onDismissRequest = { linkedDocPicker = false },
+                onDismissRequest = { linkedDocPicker = false; linkedDocConvertIndex = null },
                 title = { Text(tr(language, "链接已有文档", "Link existing document")) },
                 text = {
                     Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
@@ -213,9 +214,27 @@ internal fun CanvasDialogHost(
                             Row(
                                 Modifier.fillMaxWidth()
                                     .clickable {
-                                        val index = page.addLinkedDoc(target, 420f + 30f * (nextIndex % 5), 200f + 30f * (nextIndex % 5))
-                                        selection = CanvasSelection("shape", index)
-                                        selectedItems = listOf(CanvasSelection("shape", index))
+                                        val convert = linkedDocConvertIndex
+                                        val old = convert?.let { page.shapes.getOrNull(it) }
+                                        val resultIndex = if (convert != null && old != null) {
+                                            page.shapes[convert] = Shape(
+                                                PageLinks.SHAPE_TYPE,
+                                                old.x, old.y, old.width, old.height,
+                                                color = if (LingyeColors.dark) 0xff252525.toInt() else 0xfff7f8fb.toInt(),
+                                                title = target.title.ifBlank { "Untitled page" },
+                                                body = target.id,
+                                                borderColor = 0xffdfe3ec.toInt(),
+                                                borderStyle = "solid",
+                                                borderWidth = 1f,
+                                                cardKind = PageLinks.CARD_KIND
+                                            )
+                                            convert
+                                        } else {
+                                            page.addLinkedDoc(target, 420f + 30f * (nextIndex % 5), 200f + 30f * (nextIndex % 5))
+                                        }
+                                        selection = CanvasSelection("shape", resultIndex)
+                                        selectedItems = listOf(CanvasSelection("shape", resultIndex))
+                                        linkedDocConvertIndex = null
                                         linkedDocPicker = false
                                         changed()
                                     }
@@ -229,7 +248,7 @@ internal fun CanvasDialogHost(
                         }
                     }
                 },
-                confirmButton = { TextButton(onClick = { linkedDocPicker = false }) { Text(tr(language, "关闭", "Close")) } }
+                confirmButton = { TextButton(onClick = { linkedDocPicker = false; linkedDocConvertIndex = null }) { Text(tr(language, "关闭", "Close")) } }
             )
         }
         if (frameNavigator) {

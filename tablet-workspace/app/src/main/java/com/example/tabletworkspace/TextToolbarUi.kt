@@ -583,14 +583,16 @@ fun NoteStylePanel(
         Spacer(Modifier.height(8.dp))
         TextToolbarSectionTitle(tr(language, "阴影", "Shadow"))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf(
-                "none" to tr(language, "无", "None"),
-                "box" to tr(language, "盒状", "Box"),
-                "sticker" to tr(language, "贴纸", "Sticker"),
-                "paper" to tr(language, "纸张", "Paper"),
-                "float" to tr(language, "悬浮", "Float"),
-                "film" to tr(language, "胶片", "Film")
-            ).forEach { (value, label) ->
+            EditorStyleCatalog.shadowStyles.map { value ->
+                value to when (value) {
+                    "none" -> tr(language, "无", "None")
+                    "box" -> tr(language, "盒状", "Box")
+                    "sticker" -> tr(language, "贴纸", "Sticker")
+                    "paper" -> tr(language, "纸张", "Paper")
+                    "float" -> tr(language, "悬浮", "Float")
+                    else -> tr(language, "胶片", "Film")
+                }
+            }.forEach { (value, label) ->
                 ShadowSample(value, label, shadowStyle == value) { onShadow(value) }
             }
         }

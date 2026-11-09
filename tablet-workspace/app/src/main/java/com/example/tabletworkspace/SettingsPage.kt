@@ -241,7 +241,7 @@ private fun SettingsWorkspaceHeader(settings: WorkspaceSettings, language: AppLa
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(iconSize).clip(RoundedCornerShape(11.dp))) {
             Image(painterResource(R.drawable.ic_launcher_background), contentDescription = null, modifier = Modifier.fillMaxSize())
-            Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxSize())
+            Image(painterResource(R.drawable.ic_brand_foreground), contentDescription = null, modifier = Modifier.fillMaxSize())
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -539,23 +539,15 @@ private fun EditorSettings(
                     }
                 }
             }
-            SettingsStackRow(
+            SettingsSliderRow(
                 text("字号", "Font size"),
                 text("立即应用于标题、正文和文本块。", "Applies immediately to title, body and text blocks."),
-                help = text("字号只影响文档阅读与编辑，不改变画布对象和已有图片。", "Font size only affects document reading and editing; canvas objects and images are unchanged.")
-            ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    CompactSlider(
-                        value = settings.editorFontSize,
-                        onValueChange = { onSettingsChange(settings.copy(editorFontSize = it).normalized()) },
-                        valueRange = 12f..24f,
-                        steps = 11,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text("${settings.editorFontSize.roundToInt()} px", color = LingyeColors.Primary, fontWeight = FontWeight.SemiBold)
-                }
-            }
+                help = text("字号只影响文档阅读与编辑，不改变画布对象和已有图片。", "Font size only affects document reading and editing; canvas objects and images are unchanged."),
+                value = settings.editorFontSize,
+                valueRange = 12f..24f,
+                steps = 11,
+                valueLabel = "${settings.editorFontSize.roundToInt()} px"
+            ) { onSettingsChange(settings.copy(editorFontSize = it).normalized()) }
             SettingsControlRow(
                 text("创建文档的预设模式", "New doc default mode"),
                 text("新页面默认视图。", "Default view for new pages."),
@@ -942,13 +934,17 @@ private fun CanvasSettings(
             text("新建笔记的阴影样式。", "Shadow style for new notes."),
             help = text("只影响新笔记；选中已有笔记后，可在其工具条的“图层与更多”中单独调整阴影。", "Only affects new notes; select an existing note and adjust it from “Layers and more” in its toolbar.")
         ) {
-            SegmentedChoice(
+            SettingsDropdown(
                 listOf(
                     "none" to text("无", "None"),
                     "box" to text("卡片", "Box"),
-                    "sticker" to text("贴纸", "Sticker")
+                    "sticker" to text("贴纸", "Sticker"),
+                    "paper" to text("纸张", "Paper"),
+                    "float" to text("浮起", "Float"),
+                    "film" to text("胶片", "Film")
                 ),
-                settings.noteShadow
+                settings.noteShadow,
+                Modifier.fillMaxWidth()
             ) { onSettingsChange(settings.copy(noteShadow = it).normalized()) }
         }
         SettingsControlRow(
@@ -965,18 +961,15 @@ private fun CanvasSettings(
                 settings.noteBorderStyle
             ) { onSettingsChange(settings.copy(noteBorderStyle = it).normalized()) }
         }
-        SettingsStackRow(
+        SettingsSliderRow(
             text("边框厚度", "Border thickness"),
-            text("当前 ${settings.noteBorderWidth.roundToInt()} px。", "Current ${settings.noteBorderWidth.roundToInt()} px."),
-            help = text("只影响新笔记；无边框时不显示线条。", "Only affects new notes; hidden when the border is off.")
-        ) {
-            CompactSlider(
-                value = settings.noteBorderWidth,
-                onValueChange = { onSettingsChange(settings.copy(noteBorderWidth = it).normalized()) },
-                valueRange = 2f..12f,
-                steps = 4
-            )
-        }
+            text("新笔记的边框线宽。", "Border width for new notes."),
+            help = text("只影响新笔记；无边框时不显示线条。", "Only affects new notes; hidden when the border is off."),
+            value = settings.noteBorderWidth,
+            valueRange = 2f..12f,
+            steps = 4,
+            valueLabel = "${settings.noteBorderWidth.roundToInt()} px"
+        ) { onSettingsChange(settings.copy(noteBorderWidth = it).normalized()) }
     }
     SettingsDivider()
     SettingsGroup(text("文本", "Text")) {
@@ -992,19 +985,44 @@ private fun CanvasSettings(
                 text("绿", "Green") to 0xff15803d.toInt()
             )
         ) { onSettingsChange(settings.copy(defaultTextColor = it)) }
-        Spacer(Modifier.height(10.dp))
-        SettingsStackRow(
-            text("字体大小", "Font size"),
-            text("当前 ${settings.defaultTextSize.roundToInt()} px。", "Current ${settings.defaultTextSize.roundToInt()} px."),
-            help = text("只影响新文本框，不改变已有文本和文档字号。", "Only new text boxes; existing text and document font size are unchanged.")
+        SettingsControlRow(
+            text("字体", "Font"),
+            text("新文本框使用的字体。", "Font for new text boxes."),
+            help = text("只影响新文本框；已有文本可在工具条中调整。", "Only affects new text boxes; existing text can be changed from its toolbar.")
         ) {
-            CompactSlider(
-                value = settings.defaultTextSize,
-                onValueChange = { onSettingsChange(settings.copy(defaultTextSize = it).normalized()) },
-                valueRange = 12f..32f,
-                steps = 19
-            )
+            SegmentedChoice(
+                listOf("sans" to text("无衬线", "Sans"), "serif" to text("衬线", "Serif"), "mono" to text("等宽", "Mono")),
+                settings.defaultTextFontFamily
+            ) { onSettingsChange(settings.copy(defaultTextFontFamily = it).normalized()) }
         }
+        SettingsControlRow(
+            text("字体样式", "Font style"),
+            text("新文本框的字体样式。", "Font style for new text boxes.")
+        ) {
+            SegmentedChoice(
+                listOf("normal" to text("常规", "Normal"), "italic" to text("斜体", "Italic")),
+                settings.defaultTextFontStyle
+            ) { onSettingsChange(settings.copy(defaultTextFontStyle = it).normalized()) }
+        }
+        SettingsControlRow(
+            text("字重", "Weight"),
+            text("新文本框的字重。", "Font weight for new text boxes.")
+        ) {
+            SegmentedChoice(
+                listOf(400 to text("常规", "Regular"), 700 to text("粗体", "Bold")),
+                settings.defaultTextFontWeight
+            ) { onSettingsChange(settings.copy(defaultTextFontWeight = it).normalized()) }
+        }
+        Spacer(Modifier.height(10.dp))
+        SettingsSliderRow(
+            text("字体大小", "Font size"),
+            text("新文本框的默认字号。", "Default size for new text boxes."),
+            help = text("只影响新文本框，不改变已有文本和文档字号。", "Only new text boxes; existing text and document font size are unchanged."),
+            value = settings.defaultTextSize,
+            valueRange = 12f..32f,
+            steps = 19,
+            valueLabel = "${settings.defaultTextSize.roundToInt()} px"
+        ) { onSettingsChange(settings.copy(defaultTextSize = it).normalized()) }
         SettingsControlRow(
             text("对齐方式", "Alignment"),
             text("新文本框的文字对齐方式。", "Text alignment for new text boxes."),
@@ -1034,6 +1052,103 @@ private fun CanvasSettings(
                 text("紫", "Purple") to 0xffc7bdf8.toInt()
             )
         ) { onSettingsChange(settings.copy(shapeColor = it)) }
+        CollapsibleColorSetting(
+            text("边框颜色", "Border color"),
+            text("新图形使用此边框色。", "Border color for new shapes."),
+            help = text("只影响新图形；已有图形可在选中后的工具条中单独改色。", "Only affects new shapes; existing shapes can be changed from their toolbar."),
+            selected = settings.shapeBorderColor,
+            options = listOf(
+                text("浅灰", "Light gray") to 0xffd9deec.toInt(),
+                text("墨黑", "Ink") to 0xff20293a.toInt(),
+                text("蓝", "Blue") to 0xff2563eb.toInt(),
+                text("红", "Red") to 0xffdc2626.toInt()
+            )
+        ) { onSettingsChange(settings.copy(shapeBorderColor = it)) }
+        SettingsControlRow(
+            text("边框样式", "Border style"),
+            text("新图形的边框线型。", "Border style for new shapes."),
+            help = text("只影响新图形；已有图形可在工具条中调整。", "Only affects new shapes; existing shapes can be changed from their toolbar.")
+        ) {
+            SegmentedChoice(
+                listOf(
+                    "solid" to text("实线", "Solid"),
+                    "dashed" to text("虚线", "Dashed"),
+                    "none" to text("无边框", "None")
+                ),
+                settings.shapeBorderStyle
+            ) { onSettingsChange(settings.copy(shapeBorderStyle = it).normalized()) }
+        }
+        SettingsSliderRow(
+            text("边框厚度", "Border width"),
+            text("新图形的边框线宽。", "Border width for new shapes."),
+            help = text("只影响新图形；无边框时不显示线条。", "Only affects new shapes; hidden when the border is off."),
+            value = settings.shapeBorderWidth,
+            valueRange = 0f..12f,
+            steps = 11,
+            valueLabel = "${settings.shapeBorderWidth.roundToInt()} px"
+        ) { onSettingsChange(settings.copy(shapeBorderWidth = it).normalized()) }
+        CollapsibleColorSetting(
+            text("文字颜色", "Text color"),
+            text("新图形标签使用此颜色。", "Label color for new shapes."),
+            help = text("只影响新图形的文字；已有图形可在工具条中调整。", "Only affects new shape labels; existing shapes can be changed from their toolbar."),
+            selected = settings.shapeTextColor,
+            options = listOf(
+                text("墨黑", "Ink") to 0xff20293a.toInt(),
+                text("蓝", "Blue") to 0xff2563eb.toInt(),
+                text("红", "Red") to 0xffdc2626.toInt(),
+                text("绿", "Green") to 0xff15803d.toInt()
+            )
+        ) { onSettingsChange(settings.copy(shapeTextColor = it)) }
+        SettingsControlRow(
+            text("字体", "Font"),
+            text("新图形标签使用的字体。", "Font for new shape labels."),
+            help = text("只影响新图形；已有图形可在工具条中调整。", "Only affects new shapes; existing shapes can be changed from their toolbar.")
+        ) {
+            SegmentedChoice(
+                listOf("sans" to text("无衬线", "Sans"), "serif" to text("衬线", "Serif"), "mono" to text("等宽", "Mono")),
+                settings.shapeFontFamily
+            ) { onSettingsChange(settings.copy(shapeFontFamily = it).normalized()) }
+        }
+        SettingsSliderRow(
+            text("字体大小", "Font size"),
+            text("新图形标签的字号。", "Label size for new shapes."),
+            help = text("只影响新图形；已有图形可在工具条中调整。", "Only affects new shapes; existing shapes can be changed from their toolbar."),
+            value = settings.shapeTextSize,
+            valueRange = 8f..48f,
+            steps = 19,
+            valueLabel = "${settings.shapeTextSize.roundToInt()} px"
+        ) { onSettingsChange(settings.copy(shapeTextSize = it).normalized()) }
+        SettingsControlRow(
+            text("字体样式", "Font style"),
+            text("新图形标签的字体样式。", "Font style for new shape labels.")
+        ) {
+            SegmentedChoice(
+                listOf("normal" to text("常规", "Normal"), "italic" to text("斜体", "Italic")),
+                settings.shapeFontStyle
+            ) { onSettingsChange(settings.copy(shapeFontStyle = it).normalized()) }
+        }
+        SettingsControlRow(
+            text("字重", "Weight"),
+            text("新图形标签的字重。", "Font weight for new shape labels.")
+        ) {
+            SegmentedChoice(
+                listOf(400 to text("常规", "Regular"), 700 to text("粗体", "Bold")),
+                settings.shapeFontWeight
+            ) { onSettingsChange(settings.copy(shapeFontWeight = it).normalized()) }
+        }
+        SettingsControlRow(
+            text("对齐方式", "Alignment"),
+            text("新图形标签的文字对齐方式。", "Label alignment for new shapes.")
+        ) {
+            SegmentedChoice(
+                listOf(
+                    "left" to text("左侧", "Left"),
+                    "center" to text("居中", "Center"),
+                    "right" to text("右侧", "Right")
+                ),
+                settings.shapeTextAlign
+            ) { onSettingsChange(settings.copy(shapeTextAlign = it).normalized()) }
+        }
     }
     SettingsDivider()
     SettingsGroup(text("框架", "Frame")) {
@@ -1091,6 +1206,16 @@ private fun CanvasSettings(
             ) { onSettingsChange(settings.copy(connectorPathStyle = it).normalized()) }
         }
         SettingsControlRow(
+            text("默认起点", "Default start endpoint"),
+            text("新连线起点的端点样式。", "Endpoint style for the start of new connectors."),
+            help = text("只影响新连线；已有连线可在选中后的参数条中调整。", "Only affects new connectors; existing ones can be adjusted in their toolbar.")
+        ) {
+            SegmentedChoice(
+                listOf("none" to text("无", "None"), "dot" to text("圆点", "Dot"), "arrow" to text("箭头", "Arrow")),
+                settings.connectorStartMarker
+            ) { onSettingsChange(settings.copy(connectorStartMarker = it).normalized()) }
+        }
+        SettingsControlRow(
             text("默认终点", "Default endpoint"),
             text("优先使用圆点，也可以选箭头或无端点。", "Use a dot by default; arrows and no marker remain available."),
             help = text("终点样式只影响新连线；圆点适合流程说明，箭头适合方向关系。", "Only affects new connectors; dots suit flow notes and arrows suit direction.")
@@ -1134,13 +1259,15 @@ private fun CanvasSettings(
     }
     SettingsDivider()
     SettingsGroup(text("笔", "Pen")) {
-        SettingsStackRow(
+        SettingsSliderRow(
             text("画笔粗细", "Brush width"),
-            text("当前 ${inkWidth.roundToInt()} px", "Current ${inkWidth.roundToInt()} px"),
-            help = text("粗细只影响新笔迹；画笔和高亮在画布参数条中分别记忆各自的粗细。", "Width only affects new ink; pen and highlighter remember their own widths in the canvas bar.")
-        ) {
-            CompactSlider(value = inkWidth, onValueChange = onInkWidthChange, valueRange = 1f..12f, steps = 22)
-        }
+            text("新笔迹的默认线宽。", "Default width for new ink."),
+            help = text("粗细只影响新笔迹；画笔和高亮在画布参数条中分别记忆各自的粗细。", "Width only affects new ink; pen and highlighter remember their own widths in the canvas bar."),
+            value = inkWidth,
+            valueRange = 1f..12f,
+            steps = 22,
+            valueLabel = "${inkWidth.roundToInt()} px"
+        ) { onInkWidthChange(it) }
         Spacer(Modifier.height(6.dp))
         SettingsToggleRow(
             text("仅手写笔", "Stylus only"),
@@ -1382,11 +1509,13 @@ private fun DataSettings(
                 "完整备份 ZIP：保留页面二进制、图片、文件夹、模板、共享块与页面元数据；恢复为新增页面，不覆盖当前内容，不含撤销历史与应用设置。\n" +
                     "Markdown：保留标题、正文、待办、列表、引用、代码与分隔线；同一设备上已存在的本地图片引用可以往返，画布对象与数据库结构不会导出。\n" +
                     "HTML：导出正文并把文档图片内嵌为 data URI；导入只提取文字，图片、表格结构和样式不会恢复。\n" +
+                    "PDF：把整页无界画布导出为单页矢量 PDF，包含 Frame、图形、连线和文字；图片按原始像素嵌入，放大查看仍保持文字和线条清晰。\n" +
                     "快照 JSON：仅标题、正文与文本块；不含画布、图片与文件夹。\n" +
                     "导入上限：单个文本/HTML/快照文件 20 MB；ZIP 总计 100 MB、最多 300 个条目，压缩包内媒体文件不会导入。",
                 "Full ZIP backup: page binaries, images, folders, templates, shared blocks and page metadata; restoring adds new pages without overwriting, but excludes undo history and app settings.\n" +
                     "Markdown: headings, body, to-dos, lists, quotes, code and dividers; existing local image references round-trip on the same device, but canvas objects and database structure are not exported.\n" +
                     "HTML: body text with document images embedded as data URIs; import extracts text only, so images, tables and styling are not restored.\n" +
+                    "PDF: exports the whole edgeless page as one vector PDF with frames, shapes, connectors and text; images keep their stored pixels and text/lines stay sharp when zoomed.\n" +
                     "Snapshot JSON: title, body and text blocks only; no canvas, images or folders.\n" +
                     "Limits: 20 MB per text/HTML/snapshot file; ZIP up to 100 MB and 300 entries; media inside a ZIP is not imported."
             ),
@@ -1536,6 +1665,43 @@ private fun SettingsStackRow(
         Text(description, color = LingyeColors.Muted, fontSize = 12.sp)
         Spacer(Modifier.height(10.dp))
         content()
+    }
+}
+
+@Composable
+private fun SettingsSliderRow(
+    title: String,
+    description: String,
+    help: String? = null,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    valueLabel: String,
+    controlWidth: Dp = 300.dp,
+    onValueChange: (Float) -> Unit
+) {
+    SettingsControlRow(title, description, help, controlWidth) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            CompactSlider(
+                value = value,
+                onValueChange = onValueChange,
+                valueRange = valueRange,
+                steps = steps,
+                modifier = Modifier.weight(1f),
+                trackHeight = 2.dp,
+                thumbRadius = 4.dp
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                valueLabel,
+                Modifier.width(52.dp),
+                textAlign = TextAlign.End,
+                color = LingyeColors.Primary,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.5.sp,
+                maxLines = 1
+            )
+        }
     }
 }
 

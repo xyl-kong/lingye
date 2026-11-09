@@ -202,7 +202,9 @@ internal fun BlocksEditor(page: Page, store: PageStore, revision: Int, language:
                     },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    WorkspaceIcon(AppIcon.ADD, null, Modifier.padding(horizontal = 10.dp).size(18.dp), LingyeColors.Muted)
+                    Box(Modifier.width(76.dp), contentAlignment = Alignment.Center) {
+                        WorkspaceIcon(AppIcon.ADD, null, Modifier.size(18.dp), LingyeColors.Muted)
+                    }
                     Text(tr(language, "输入文字或 /", "Type text or /"), color = LingyeColors.Muted, fontSize = editorFontSize.sp)
                 }
             }
@@ -491,7 +493,7 @@ internal fun BlockInsertMenu(
 
 @Composable
 internal fun DocumentLinksPanel(page: Page, pages: List<Page>, language: AppLanguage) {
-    var visible by remember(page.id) { mutableStateOf(true) }
+    var visible by remember(page.id) { mutableStateOf(false) }
     val backlinks = PageLinks.backlinks(page, pages).size
     val outgoing = page.shapes.count { PageLinks.targetId(it) != null }
     Column(Modifier.fillMaxWidth().padding(start = 72.dp, top = 28.dp, bottom = 48.dp)) {

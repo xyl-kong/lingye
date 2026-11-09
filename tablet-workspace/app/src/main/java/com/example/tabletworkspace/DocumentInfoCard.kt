@@ -59,7 +59,7 @@ internal fun DocumentInfoCard(
     templatePage: Boolean,
     onTemplateChange: (Boolean) -> Unit
 ) {
-    var expanded by remember(page.id) { mutableStateOf(true) }
+    var expanded by remember(page.id) { mutableStateOf(false) }
     var propertiesExpanded by remember(page.id) { mutableStateOf(true) }
     var showMore by remember(page.id) { mutableStateOf(false) }
     val customProperties = properties.filter { DocPropertyCatalog.isCustom(it) }.sortedBy { it.order }

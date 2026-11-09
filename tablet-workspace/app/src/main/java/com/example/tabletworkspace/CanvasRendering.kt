@@ -246,10 +246,16 @@ internal fun DrawScope.drawCanvasContent(
                                 )
                                 "paper" -> {
                                     drawRoundRect(
-                                        Color.White.copy(alpha = 0.9f),
-                                        a - Offset(2.dp.toPx(), 2.dp.toPx()),
-                                        Size(boxSize.width + 4.dp.toPx(), boxSize.height + 4.dp.toPx()),
-                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius.x + 2.dp.toPx())
+                                        Color.Black.copy(alpha = 0.08f),
+                                        a + Offset(3.dp.toPx(), 6.dp.toPx()),
+                                        Size(boxSize.width + 2.dp.toPx(), boxSize.height + 2.dp.toPx()),
+                                        cornerRadius = radius
+                                    )
+                                    drawRoundRect(
+                                        Color.Black.copy(alpha = 0.16f),
+                                        a + Offset(2.dp.toPx(), 3.dp.toPx()),
+                                        boxSize,
+                                        cornerRadius = radius
                                     )
                                 }
                                 "float" -> {
@@ -457,6 +463,20 @@ internal fun DrawScope.drawCanvasContent(
                         when (s.shadowStyle) {
                             "none" -> Unit
                             "sticker" -> drawRoundRect(Color.Black.copy(alpha = 0.12f), a + Offset(0f, 6.dp.toPx()), boxSize, cornerRadius = radius)
+                            "paper" -> {
+                                drawRoundRect(
+                                    Color.Black.copy(alpha = 0.08f),
+                                    a + Offset(3.dp.toPx(), 6.dp.toPx()),
+                                    Size(boxSize.width + 2.dp.toPx(), boxSize.height + 2.dp.toPx()),
+                                    cornerRadius = radius
+                                )
+                                drawRoundRect(
+                                    Color.Black.copy(alpha = 0.16f),
+                                    a + Offset(2.dp.toPx(), 3.dp.toPx()),
+                                    boxSize,
+                                    cornerRadius = radius
+                                )
+                            }
                             else -> drawRoundRect(Color.Black.copy(alpha = 0.07f), a + Offset(0f, 4.dp.toPx()), boxSize, cornerRadius = radius)
                         }
                         drawRoundRect(Color(s.color), a, boxSize, cornerRadius = radius)
@@ -615,16 +635,17 @@ internal fun DrawScope.drawCanvasContent(
             layerIds.filterNot { isFrameLayerId(it) || isConnectorLayerId(it) }.forEach(::drawLayerItemById)
             snapGuides.forEach { guide ->
                 val guideColor = Color(0xFF8B5CF6)
+                val over = 14.dp.toPx()
                 if (guide.vertical) {
                     val x = pos(Point(guide.position, 0f)).x
-                    val y1 = pos(Point(0f, guide.start)).y
-                    val y2 = pos(Point(0f, guide.end)).y
-                    drawLine(guideColor, Offset(x, y1), Offset(x, y2), strokeWidth = 1.dp.toPx())
+                    val y1 = pos(Point(0f, guide.start)).y - over
+                    val y2 = pos(Point(0f, guide.end)).y + over
+                    drawLine(guideColor, Offset(x, y1), Offset(x, y2), strokeWidth = 1.5.dp.toPx())
                 } else {
                     val y = pos(Point(0f, guide.position)).y
-                    val x1 = pos(Point(guide.start, 0f)).x
-                    val x2 = pos(Point(guide.end, 0f)).x
-                    drawLine(guideColor, Offset(x1, y), Offset(x2, y), strokeWidth = 1.dp.toPx())
+                    val x1 = pos(Point(guide.start, 0f)).x - over
+                    val x2 = pos(Point(guide.end, 0f)).x + over
+                    drawLine(guideColor, Offset(x1, y), Offset(x2, y), strokeWidth = 1.5.dp.toPx())
                 }
             }
             val selectedShapeIndices=selectedItems.filter { it.type=="shape" }.map { it.index }.toSet()

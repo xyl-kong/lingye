@@ -222,7 +222,7 @@ internal data class ConnectorRenderData(
 
 @Composable
 @androidx.compose.runtime.NonSkippableComposable
-internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, workspaceTemplates: List<CardTemplate>, sharedBlocks:List<SharedBlock>, templatesAvailable: Boolean, replaceTemplates: (List<CardTemplate>) -> Unit, revision: Int, language: AppLanguage, settings: WorkspaceSettings, focusMode: Boolean, setFocusMode: (Boolean) -> Unit, beginGesture: () -> Unit, commitGesture: () -> Unit, cancelGesture: () -> Unit, tool: String, setTool: (String) -> Unit, penOnly: Boolean, setPenOnly: (Boolean) -> Unit, eraserArea: Boolean, setEraserArea: (Boolean) -> Unit, brushKind: String, setBrushKind: (String) -> Unit, highlighterColor: Int, setHighlighterColor: (Int) -> Unit, highlighterWidth: Float, setHighlighterWidth: (Float) -> Unit, inkColor: Int, setInkColor: (Int) -> Unit, inkWidth: Float, setInkWidth: (Float) -> Unit, updateSettings: (WorkspaceSettings) -> Unit, changed: () -> Unit, changedText: (String?) -> Unit, redraw: () -> Unit, addImage: () -> Unit, undo: () -> Unit, redo: () -> Unit, exitCanvas: () -> Unit, onOpenLinkedPage: (String) -> Unit, initialScale: Float, initialOffsetX: Float, initialOffsetY: Float, initialSelectionIds: List<String>, onViewportChange: (Float, Float, Float) -> Unit, onSelectionChange: (List<String>) -> Unit, showFrameNavigator: Boolean, onFrameNavigatorShown: () -> Unit) {
+internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, workspaceTemplates: List<CardTemplate>, sharedBlocks:List<SharedBlock>, templatesAvailable: Boolean, replaceTemplates: (List<CardTemplate>) -> Unit, revision: Int, language: AppLanguage, settings: WorkspaceSettings, focusMode: Boolean, setFocusMode: (Boolean) -> Unit, beginGesture: () -> Unit, commitGesture: () -> Unit, cancelGesture: () -> Unit, tool: String, setTool: (String) -> Unit, penOnly: Boolean, setPenOnly: (Boolean) -> Unit, eraserArea: Boolean, setEraserArea: (Boolean) -> Unit, brushKind: String, setBrushKind: (String) -> Unit, highlighterColor: Int, setHighlighterColor: (Int) -> Unit, highlighterWidth: Float, setHighlighterWidth: (Float) -> Unit, inkColor: Int, setInkColor: (Int) -> Unit, inkWidth: Float, setInkWidth: (Float) -> Unit, updateSettings: (WorkspaceSettings) -> Unit, changed: () -> Unit, changedText: (String?) -> Unit, redraw: () -> Unit, addImage: (Float, Float) -> Unit, undo: () -> Unit, redo: () -> Unit, exitCanvas: () -> Unit, onOpenLinkedPage: (String) -> Unit, initialScale: Float, initialOffsetX: Float, initialOffsetY: Float, initialSelectionIds: List<String>, onViewportChange: (Float, Float, Float) -> Unit, onSelectionChange: (List<String>) -> Unit, showFrameNavigator: Boolean, onFrameNavigatorShown: () -> Unit) {
     val editorState = remember(page.id) { CanvasEditorState(page, initialScale, initialOffsetX, initialOffsetY) }
     var scale by editorState.scale
     var pan by editorState.pan
@@ -240,6 +240,7 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
     var textToolsMenu by editorState.textToolsMenu
     var pendingTextKind by editorState.pendingTextKind
     var linkedDocPicker by editorState.linkedDocPicker
+    var linkedDocConvertIndex by editorState.linkedDocConvertIndex
     var mindmapToolsMenu by editorState.mindmapToolsMenu
     var activeMenuButton by editorState.activeMenuButton
     fun dismissToolMenus() {
@@ -354,6 +355,8 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
     SystemBarsEffect(focusMode)
     val motionEnabled = settings.motionEnabled
     var motionTime by remember { mutableLongStateOf(0L) }
+    var lastCanvasTapAt by remember { mutableLongStateOf(0L) }
+    var lastCanvasTapPosition by remember { mutableStateOf(Offset.Zero) }
     val systemMotion = android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
     LaunchedEffect(page, revision, motionEnabled, systemMotion) {
         if (motionEnabled && systemMotion && page.connectors.any { it.animated }) while (true) {
@@ -381,7 +384,7 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
     val primaryObjectKind = CanvasObjectSpecs.kindOf(page, selection)
     fun closeCanvasOverlays() {
         moreToolsMenu = false; textToolsMenu = false; mindmapToolsMenu = false; templateGalleryOpen = false
-        frameNavigator = false; linkedDocPicker = false; mindmapParentPicker = null; mindmapDeleteId = null
+        frameNavigator = false; linkedDocPicker = false; linkedDocConvertIndex = null; mindmapParentPicker = null; mindmapDeleteId = null
         frameRename = null; manageTemplates = false; renameTemplate = null; removeTemplate = null
         templateSave = null; saveSelectionTemplate = false; cropTarget = null
     }
@@ -495,33 +498,50 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
                 )
             }
         }
-        Canvas(Modifier.fillMaxSize().onSizeChanged { viewportSizePx = it }.focusRequester(canvasFocusRequester).onPreviewKeyEvent { handleCanvasShortcut(it) }.focusable().onFocusChanged { if (!it.isFocused) { snapGuides = emptyList(); dragSnapStart = null } }.pointerInput(mindmapToolsMenu, templateGalleryOpen, moreToolsMenu) { if (mindmapToolsMenu || templateGalleryOpen || moreToolsMenu) awaitPointerEventScope { while (true) { val event = awaitPointerEvent(PointerEventPass.Initial); if (event.type == PointerEventType.Press) { chooseTool("选择"); event.changes.forEach { it.consume() } } } } }.pointerInput(tool) { if (tool == "Frame" || tool in setOf("矩形", "圆角矩形", "圆形", "三角形", "菱形")) awaitPointerEventScope { while (true) { val downEvent = awaitPointerEvent(PointerEventPass.Final); val down = downEvent.changes.firstOrNull { it.pressed && !it.previousPressed } ?: continue; val start = down.position; var moved = 0f; var ended = false; while (!ended) { val e = awaitPointerEvent(PointerEventPass.Final); val c = e.changes.firstOrNull { it.id == down.id } ?: break; moved = maxOf(moved, (c.position - start).getDistance()); if (!c.pressed) ended = true }; if (ended && moved <= viewConfiguration.touchSlop) chooseTool("选择") } } }.pointerInput(page, tool, multiSelect, presentingFrameId) { if (presentingFrameId == null && tool == "选择") detectTapGestures(onDoubleTap = { tap ->
-            handleCanvasDoubleTap(
-                tap = tap,
-                page = page,
-                scale = scale,
-                worldPoint = world(tap),
-                onOpenLinkedPage = onOpenLinkedPage,
-                onSelect = { selected, items -> selection = selected; selectedItems = items },
-                onEditCard = { cardEdit = it }
-            )
-        }, onTap = { tap ->
-            handleCanvasTap(
-                tap = tap,
-                page = page,
-                scale = scale,
-                density = density,
-                viewport = viewport,
-                worldPoint = world(tap),
-                selection = selection,
-                selectedItems = selectedItems,
-                multiSelect = multiSelect,
-                onFocusCanvas = { runCatching { canvasFocusRequester.requestFocus() } },
-                onCardEditChange = { cardEdit = it },
-                onOpenTextLink = ::openTextLink,
-                onSelect = { selected, items -> selection = selected; selectedItems = items },
-                onChanged = changed
-            )
+        Canvas(Modifier.fillMaxSize().onSizeChanged { viewportSizePx = it }.focusRequester(canvasFocusRequester).onPreviewKeyEvent { handleCanvasShortcut(it) }.focusable().onFocusChanged { if (!it.isFocused) { snapGuides = emptyList(); dragSnapStart = null } }.pointerInput(mindmapToolsMenu, templateGalleryOpen, moreToolsMenu) { if (mindmapToolsMenu || templateGalleryOpen || moreToolsMenu) awaitPointerEventScope { while (true) { val event = awaitPointerEvent(PointerEventPass.Initial); if (event.type == PointerEventType.Press) { chooseTool("选择"); event.changes.forEach { it.consume() } } } } }.pointerInput(tool) { if (tool == "Frame" || tool == "文本" || tool in setOf("矩形", "圆角矩形", "圆形", "三角形", "菱形")) awaitPointerEventScope { while (true) { val downEvent = awaitPointerEvent(PointerEventPass.Final); val down = downEvent.changes.firstOrNull { it.pressed && !it.previousPressed } ?: continue; val start = down.position; var moved = 0f; var ended = false; while (!ended) { val e = awaitPointerEvent(PointerEventPass.Final); val c = e.changes.firstOrNull { it.id == down.id } ?: break; moved = maxOf(moved, (c.position - start).getDistance()); if (!c.pressed) ended = true }; if (ended && moved <= viewConfiguration.touchSlop) {
+                    chooseTool("选择")
+                    if (tool == "文本") {
+                        val hit = page.hitTest(world(start), 12f / scale)
+                        if (hit != null) {
+                            selection = hit
+                            selectedItems = listOf(hit)
+                        }
+                    }
+                } } } }.pointerInput(page, tool, multiSelect, presentingFrameId) { if (presentingFrameId == null && tool == "选择") detectTapGestures(onTap = { tap ->
+            val now = android.os.SystemClock.uptimeMillis()
+            val isDoubleTap = now - lastCanvasTapAt in 1..viewConfiguration.doubleTapTimeoutMillis &&
+                (tap - lastCanvasTapPosition).getDistance() <= 48f * density
+            if (isDoubleTap) {
+                lastCanvasTapAt = 0L
+                handleCanvasDoubleTap(
+                    tap = tap,
+                    page = page,
+                    scale = scale,
+                    worldPoint = world(tap),
+                    onOpenLinkedPage = onOpenLinkedPage,
+                    onSelect = { selected, items -> selection = selected; selectedItems = items },
+                    onEditCard = { cardEdit = it }
+                )
+            } else {
+                lastCanvasTapAt = now
+                lastCanvasTapPosition = tap
+                handleCanvasTap(
+                    tap = tap,
+                    page = page,
+                    scale = scale,
+                    density = density,
+                    viewport = viewport,
+                    worldPoint = world(tap),
+                    selection = selection,
+                    selectedItems = selectedItems,
+                    multiSelect = multiSelect,
+                    onFocusCanvas = { runCatching { canvasFocusRequester.requestFocus() } },
+                    onCardEditChange = { cardEdit = it },
+                    onOpenTextLink = ::openTextLink,
+                    onSelect = { selected, items -> selection = selected; selectedItems = items },
+                    onChanged = changed
+                )
+            }
         }) }
         .canvasGestureInput(
             page = page,
@@ -632,6 +652,10 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
                 cropBottom = bottom
             },
             onDrawConnector = { enterConnectorTool(it) },
+            onConvertTextToLinkedDoc = { i ->
+                linkedDocConvertIndex = i
+                linkedDocPicker = true
+            },
             hideKeyboard = { keyboardController?.hide() },
             changedText = changedText
         )
@@ -657,7 +681,10 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
                 dismissToolMenus = ::dismissToolMenus,
                 selectMenuOption = ::selectMenuOption,
                 insertMindmap = ::insertMindmap,
-                addImage = addImage,
+                addImage = {
+                    val center = world(Offset(viewportSizePx.width / 2f, viewportSizePx.height / 2f))
+                    addImage(center.x - 120f, center.y - 80f)
+                },
                 changed = changed,
                 undo = undo,
                 redo = redo,

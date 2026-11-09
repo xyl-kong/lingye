@@ -35,6 +35,7 @@ internal fun PageRowActions(
     onOpenInNewTab: () -> Unit,
     onFavorite: () -> Unit,
     onRemoveFolder: () -> Unit,
+    onMove: () -> Unit,
     onTrash: () -> Unit
 ) {
     Box {
@@ -68,6 +69,7 @@ internal fun PageRowActions(
                 onFavorite,
                 icon = if (model.favorite) AppIcon.FAVORITED else AppIcon.FAVORITE
             )
+            MenuRow(tr(language, "移动", "Move"), onMove, icon = AppIcon.FOLDER, enabled = !model.trashed)
             if (model.folders.isNotEmpty()) {
                 MenuRow(tr(language, "从文件夹移出", "Remove from folder"), onRemoveFolder, icon = AppIcon.FOLDER)
             }

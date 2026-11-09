@@ -14,21 +14,26 @@ data class ConnectorDraft(
     val snapEdge: String = ""
 )
 
-/** Topmost shape under [point], ignoring strokes and connectors (frames count when their band is hit). */
+/** Topmost shape under [point], ignoring strokes and connectors. Frames fall back to their body when no child object is hit. */
 fun Page.shapeIndexAt(point: Point, tolerance: Float): Int? {
+    var frameFallback: Int? = null
     for (id in orderedLayerIds().asReversed()) {
         val item = findStableObject(id) ?: continue
         if (item.type != "shape") continue
         val shape = shapes[item.index]
         if (shape.type == "frame") {
-            if (FrameSemantics.hit(shape, point, tolerance)) return item.index
+            if (point.x >= shape.x - tolerance && point.x <= shape.x + shape.width + tolerance &&
+                point.y >= shape.y - tolerance && point.y <= shape.y + shape.height + tolerance
+            ) {
+                if (frameFallback == null) frameFallback = item.index
+            }
             continue
         }
         if (point.x >= shape.x - tolerance && point.x <= shape.x + shape.width + tolerance &&
             point.y >= shape.y - tolerance && point.y <= shape.y + shape.height + tolerance
         ) return item.index
     }
-    return null
+    return frameFallback
 }
 
 /** Nearest of the five supported anchor points on [shapeIndex] to [point]. */
