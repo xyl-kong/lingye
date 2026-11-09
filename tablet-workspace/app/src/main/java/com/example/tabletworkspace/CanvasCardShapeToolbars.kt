@@ -112,7 +112,7 @@ internal fun CanvasCardToolbar(
             index?.let { index ->
                 page.shapes.getOrNull(index)?.let { shape ->
                     var layerMenu by remember(index) { mutableStateOf(false) }
-                    var colorMenu by remember(index) { mutableStateOf(false) }
+                    var stylePanel by remember(index) { mutableStateOf(false) }
                     val at=viewport.toScreen(Point(shape.x,shape.y))
                     ContextualToolbarHost(
                         anchor = CanvasToolbarAnchor(
@@ -133,60 +133,55 @@ internal fun CanvasCardToolbar(
                             CompactIconAction(AppIcon.COPY,tr(language,"复制卡片","Duplicate card"),{val copied=page.duplicateSelections(listOf(CanvasSelection("shape",index)));onSelect(copied.lastOrNull(), copied);onChanged()})
                             Text("${(scale*100).roundToInt()}%",fontSize=11.sp,color=LingyeColors.Muted,modifier=Modifier.padding(horizontal=7.dp))
                             Box {
-                                Surface(
-                                    onClick = { colorMenu = true },
-                                    shape = RoundedCornerShape(9.dp),
-                                    color = Color(shape.color),
-                                    border = BorderStroke(1.dp, LingyeColors.Line),
-                                    modifier = Modifier.padding(horizontal = 3.dp).size(26.dp)
+                                TextToolbarIconButton(
+                                    description = tr(language, "笔记样式", "Note style"),
+                                    onClick = { stylePanel = true }
+                                ) { tint -> TextToolGlyph(TextToolGlyphKind.Palette, tint) }
+                                LingyeDropdownMenu(
+                                    expanded = stylePanel,
+                                    onDismissRequest = { stylePanel = false },
+                                    modifier = Modifier.width(292.dp),
+                                    offset = DpOffset((-134).dp, 18.dp)
                                 ) {
-                                    Box(Modifier.semantics { contentDescription = tr(language, "笔记背景色", "Note background") })
-                                }
-                                LingyeDropdownMenu(expanded = colorMenu, onDismissRequest = { colorMenu = false }) {
-                                    ColorPaletteMenu(selected = shape.color, onPick = { color ->
-                                        CanvasPropertyEditor.updateShape(page, index, onChanged) { it.copy(color = color) }
-                                        colorMenu = false
-                                    }, onRequestCustom = { colorMenu = false })
+                                    NoteStylePanel(
+                                        fillColor = shape.color,
+                                        shadowStyle = shape.shadowStyle,
+                                        borderWidth = shape.borderWidth,
+                                        borderStyle = shape.borderStyle,
+                                        cornerRadius = shape.cornerRadius,
+                                        language = language,
+                                        onFill = { fill ->
+                                            CanvasPropertyEditor.updateShape(page, index, onChanged) {
+                                                it.copy(color = fill, textColor = readableTextColor(fill, it.textColor))
+                                            }
+                                        },
+                                        onShadow = { value ->
+                                            CanvasPropertyEditor.updateShape(page, index, onChanged) { it.copy(shadowStyle = value) }
+                                        },
+                                        onBorderWidth = { value ->
+                                            CanvasPropertyEditor.updateShape(page, index, onChanged) {
+                                                it.copy(borderWidth = value, borderStyle = if (it.borderStyle == "none") "solid" else it.borderStyle)
+                                            }
+                                        },
+                                        onBorderStyle = { value ->
+                                            CanvasPropertyEditor.updateShape(page, index, onChanged) {
+                                                it.copy(borderStyle = value, borderWidth = if (value == "none") it.borderWidth else it.borderWidth.coerceAtLeast(2f))
+                                            }
+                                        },
+                                        onCornerRadius = { value ->
+                                            CanvasPropertyEditor.updateShape(page, index, onChanged) { it.copy(cornerRadius = value) }
+                                        }
+                                    )
                                 }
                             }
                             Box {
-                                CompactIconAction(AppIcon.MORE,tr(language,"图层与更多","Layers and more"),{layerMenu=true},LingyeColors.Muted)
+                                CompactIconAction(AppIcon.MORE,tr(language,"图层","Layer"),{layerMenu=true},LingyeColors.Muted)
                                 LingyeDropdownMenu(expanded=layerMenu,onDismissRequest={layerMenu=false}) {
                                     LayerMenuItems(language, showIcons = true) { move ->
                                         val moved = page.reorderSelection(CanvasSelection("shape", index), move)
                                         onSelect(moved, listOf(moved))
                                         layerMenu = false
                                         onChanged()
-                                    }
-                                    HorizontalDivider(Modifier.padding(vertical=4.dp), color=LingyeColors.Line)
-                                    MenuSectionLabel(tr(language,"笔记样式","Note style"))
-                                    MenuSectionLabel(tr(language,"阴影","Shadow"))
-                                    EditorStyleCatalog.shadowStyles.map { value ->
-                                        value to when (value) {
-                                            "none" -> tr(language,"无阴影","No shadow")
-                                            "box" -> tr(language,"卡片阴影","Card shadow")
-                                            "sticker" -> tr(language,"贴纸阴影","Sticker shadow")
-                                            "paper" -> tr(language,"纸张阴影","Paper shadow")
-                                            "float" -> tr(language,"浮起阴影","Float shadow")
-                                            else -> tr(language,"胶片阴影","Film shadow")
-                                        }
-                                    }.forEach { (value,label) ->
-                                        MenuCheckItem(label, shape.shadowStyle == value) {
-                                            CanvasPropertyEditor.updateShape(page,index,onChanged){ it.copy(shadowStyle=value) };layerMenu=false
-                                        }
-                                    }
-                                    MenuSectionLabel(tr(language,"圆角","Corners"))
-                                    listOf(
-                                        0f to tr(language,"无","None"),
-                                        8f to tr(language,"小","Small"),
-                                        16f to tr(language,"中","Medium"),
-                                        24f to tr(language,"大","Large"),
-                                        32f to tr(language,"超大","Huge")
-                                    ).forEach { (radius,label) ->
-                                        val active = kotlin.math.abs(shape.cornerRadius - radius) < 0.5f
-                                        MenuCheckItem(label, active) {
-                                            CanvasPropertyEditor.updateShape(page,index,onChanged){ it.copy(cornerRadius=radius) };layerMenu=false
-                                        }
                                     }
                                 }
                             }
