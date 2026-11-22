@@ -1,8 +1,10 @@
 package com.example.tabletworkspace
 
 import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.input.TextFieldValue
@@ -21,6 +23,10 @@ internal class CanvasEditorState(
 ) {
     val scale: MutableFloatState = mutableFloatStateOf(initialScale)
     val pan: MutableState<Offset> = mutableStateOf(Offset(initialOffsetX, initialOffsetY))
+    /** True from the second finger down until every finger in that navigation gesture is up. */
+    val viewportGestureActive: MutableState<Boolean> = mutableStateOf(false)
+    /** Lets tap handlers reject a press that turned into a two-finger navigation gesture. */
+    val viewportGestureGeneration: MutableIntState = mutableIntStateOf(0)
     val points: MutableState<List<Point>> = mutableStateOf(emptyList())
     val selection: MutableState<CanvasSelection?> = StableSelectionDelegate(page)
     val selectedItems: MutableState<List<CanvasSelection>> = StableSelectionListDelegate(page)
@@ -48,6 +54,7 @@ internal class CanvasEditorState(
     val cropBottom: MutableFloatState = mutableFloatStateOf(1f)
     val cardEdit: MutableState<Int?> = mutableStateOf(null)
     val textEditValue: MutableState<TextFieldValue?> = mutableStateOf(null)
+    val formatPainter: MutableState<TextFormatPaint?> = mutableStateOf(null)
     val frameRename: MutableState<Int?> = mutableStateOf(null)
     val frameTitleText: MutableState<String> = mutableStateOf("")
     val frameNavigator: MutableState<Boolean> = mutableStateOf(false)

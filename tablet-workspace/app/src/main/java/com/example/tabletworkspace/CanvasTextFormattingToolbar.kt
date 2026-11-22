@@ -121,6 +121,7 @@ internal fun CanvasTextFormattingToolbar(
     editSelectionStart: Int,
     editSelectionEnd: Int,
     textEditValueState: MutableState<TextFieldValue?>,
+    formatPainterState: MutableState<TextFormatPaint?>,
     hideKeyboard: () -> Unit,
     onChanged: () -> Unit,
     onCardEditChange: (Int?) -> Unit,
@@ -128,6 +129,27 @@ internal fun CanvasTextFormattingToolbar(
     changedText: (String?) -> Unit
 ) {
     var textEditValue by textEditValueState
+            val selectionContext = LocalContext.current
+            val formatPaint = formatPainterState.value
+            LaunchedEffect(formatPaint, editShape.id, editSelectionStart, editSelectionEnd) {
+                if (formatPaint == null || formatPaint.isSource(editShape.id, editSelectionStart, editSelectionEnd)) return@LaunchedEffect
+                val target = page.shapes.getOrNull(editIndex)?.takeIf { it.id == editShape.id && it.type == "text" && !it.locked }
+                if (target != null && editSelectionEnd <= target.body.length) {
+                    val spans = TextFormatPainter.apply(
+                        target.textSpans, editSelectionStart, editSelectionEnd, target.body.length, formatPaint
+                    )
+                    if (spans != target.textSpans) {
+                        page.shapes[editIndex] = target.copy(textSpans = spans)
+                        changedText("text-format-painter:${target.id}")
+                    }
+                    android.widget.Toast.makeText(
+                        selectionContext,
+                        tr(language, "已应用格式", "Formatting applied"),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+                formatPainterState.value = null
+            }
             var textStyleMenu by remember(editIndex) { mutableStateOf(false) }
             var textAlignMenu by remember(editIndex) { mutableStateOf(false) }
             var textMoreMenu by remember(editIndex) { mutableStateOf(false) }
@@ -141,7 +163,6 @@ internal fun CanvasTextFormattingToolbar(
             var textCommentDraft by remember(editIndex) { mutableStateOf("") }
             val bounds = page.selectionBounds(listOf(CanvasSelection("shape", editIndex))) ?: return
             val at = viewport.toScreen(Point(bounds.left, bounds.top))
-            val selectionContext = LocalContext.current
             val selectionClipboard = selectionContext.getSystemService(android.content.ClipboardManager::class.java)
             val commonFlags = TextFormatting.rangeFlags(editShape.textSpans, editSelectionStart, editSelectionEnd)
             fun toggleFlag(flag: Int) {
@@ -356,6 +377,7 @@ internal fun CanvasTextFormattingToolbar(
                         underline = commonFlags and TextSpan.UNDERLINE != 0,
                         strike = commonFlags and TextSpan.STRIKE != 0,
                         code = commonFlags and TextSpan.CODE != 0,
+                        formatPainterActive = formatPaint != null,
                         styleMenuExpanded = textStyleMenu,
                         onDismissStyleMenu = { textStyleMenu = false },
                         styleMenu = {
@@ -632,6 +654,17 @@ internal fun CanvasTextFormattingToolbar(
                         onStrike = { toggleFlag(TextSpan.STRIKE) },
                         onUnderline = { toggleFlag(TextSpan.UNDERLINE) },
                         onHighlight = { hideKeyboard(); textHighlightMenu = true },
+                        onFormatPainter = {
+                            val next = if (formatPaint?.isSource(editShape.id, editSelectionStart, editSelectionEnd) == true) null
+                            else TextFormatPainter.capture(editShape, editSelectionStart, editSelectionEnd)
+                            formatPainterState.value = next
+                            android.widget.Toast.makeText(
+                                selectionContext,
+                                if (next == null) tr(language, "已取消格式刷", "Format painter cancelled")
+                                else tr(language, "已复制选区起始文字格式，请选中目标文字", "Style copied from selection start; select target text"),
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        },
                         onLinkedDoc = { hideKeyboard(); textLinkedDocMenu = true },
                         onComment = { openCommentPopover() },
                         onMore = { hideKeyboard(); textMoreMenu = true }

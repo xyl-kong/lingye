@@ -498,7 +498,7 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
                 )
             }
         }
-        Canvas(Modifier.fillMaxSize().onSizeChanged { viewportSizePx = it }.focusRequester(canvasFocusRequester).onPreviewKeyEvent { handleCanvasShortcut(it) }.focusable().onFocusChanged { if (!it.isFocused) { snapGuides = emptyList(); dragSnapStart = null } }.pointerInput(mindmapToolsMenu, templateGalleryOpen, moreToolsMenu) { if (mindmapToolsMenu || templateGalleryOpen || moreToolsMenu) awaitPointerEventScope { while (true) { val event = awaitPointerEvent(PointerEventPass.Initial); if (event.type == PointerEventType.Press) { chooseTool("选择"); event.changes.forEach { it.consume() } } } } }.pointerInput(tool) { if (tool == "Frame" || tool == "文本" || tool in setOf("矩形", "圆角矩形", "圆形", "三角形", "菱形")) awaitPointerEventScope { while (true) { val downEvent = awaitPointerEvent(PointerEventPass.Final); val down = downEvent.changes.firstOrNull { it.pressed && !it.previousPressed } ?: continue; val start = down.position; var moved = 0f; var ended = false; while (!ended) { val e = awaitPointerEvent(PointerEventPass.Final); val c = e.changes.firstOrNull { it.id == down.id } ?: break; moved = maxOf(moved, (c.position - start).getDistance()); if (!c.pressed) ended = true }; if (ended && moved <= viewConfiguration.touchSlop) {
+        Canvas(Modifier.fillMaxSize().onSizeChanged { viewportSizePx = it }.focusRequester(canvasFocusRequester).onPreviewKeyEvent { handleCanvasShortcut(it) }.focusable().onFocusChanged { if (!it.isFocused) { snapGuides = emptyList(); dragSnapStart = null } }.pointerInput(mindmapToolsMenu, templateGalleryOpen, moreToolsMenu) { if (mindmapToolsMenu || templateGalleryOpen || moreToolsMenu) awaitPointerEventScope { while (true) { val event = awaitPointerEvent(PointerEventPass.Initial); if (event.type == PointerEventType.Press) { chooseTool("选择"); event.changes.forEach { it.consume() } } } } }.pointerInput(tool) { if (tool == "Frame" || tool == "文本" || tool in setOf("矩形", "圆角矩形", "圆形", "三角形", "菱形")) awaitPointerEventScope { while (true) { val downEvent = awaitPointerEvent(PointerEventPass.Final); val down = downEvent.changes.firstOrNull { it.pressed && !it.previousPressed } ?: continue; val start = down.position; val generation = editorState.viewportGestureGeneration.intValue; var moved = 0f; var ended = false; while (!ended) { val e = awaitPointerEvent(PointerEventPass.Final); val c = e.changes.firstOrNull { it.id == down.id } ?: break; moved = maxOf(moved, (c.position - start).getDistance()); if (!c.pressed) ended = true }; if (ended && generation == editorState.viewportGestureGeneration.intValue && moved <= viewConfiguration.touchSlop) {
                     chooseTool("选择")
                     if (tool == "文本") {
                         val hit = page.hitTest(world(start), 12f / scale)
@@ -543,6 +543,13 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
                 )
             }
         }) }
+        .canvasTwoFingerNavigationInput(
+            page = page,
+            tool = tool,
+            presentingFrameId = presentingFrameId,
+            state = editorState,
+            cancelGesture = cancelGesture
+        )
         .canvasGestureInput(
             page = page,
             language = language,
@@ -633,6 +640,7 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
             selectedConnectorIndex = targets.connector,
             cardEdit = cardEdit,
             textEditValueState = editorState.textEditValue,
+            formatPainterState = editorState.formatPainter,
             onCardEditChange = { cardEdit = it },
             onSaveTemplate = { templateName = ""; templateSave = it },
             onSelect = { selected, items -> selection = selected; selectedItems = items },

@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "com.example.tabletworkspace"
     compileSdk = 36
-    defaultConfig { applicationId = "com.example.tabletworkspace"; minSdk = 26; targetSdk = 36; versionCode = 15; versionName = "0.15"; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" }
+    defaultConfig { applicationId = "com.example.tabletworkspace"; minSdk = 26; targetSdk = 36; versionCode = 16; versionName = "0.15.1"; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" }
     signingConfigs { getByName("debug") { storeFile = rootProject.file("debug.keystore"); storePassword = "android"; keyAlias = "androiddebugkey"; keyPassword = "android" } }
     buildTypes { getByName("release") { isDebuggable = false; isMinifyEnabled = true; signingConfig = signingConfigs.getByName("debug"); proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro") } }
     buildFeatures { compose = true; buildConfig = true }

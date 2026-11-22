@@ -383,6 +383,12 @@ private fun TextToolbarAnchoredMenu(
     }
 }
 
+private val FormatPainterIcon = listOf(
+    "M4 4.25h11A2.75 2.75 0 0 1 17.75 7v2A2.75 2.75 0 0 1 15 11.75H4A2.75 2.75 0 0 1 1.25 9V7A2.75 2.75 0 0 1 4 4.25m0 1.5c-.69 0-1.25.56-1.25 1.25v2c0 .69.56 1.25 1.25 1.25h11c.69 0 1.25-.56 1.25-1.25V7c0-.69-.56-1.25-1.25-1.25z",
+    "M17 6.25h1A3.75 3.75 0 0 1 21.75 10v1A3.75 3.75 0 0 1 18 14.75h-5.25v2.5a.75.75 0 0 1-1.5 0V14A.75.75 0 0 1 12 13.25h6A2.25 2.25 0 0 0 20.25 11v-1A2.25 2.25 0 0 0 18 7.75h-1a.75.75 0 0 1 0-1.5",
+    "M10.25 17a.75.75 0 0 1 .75-.75h2a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-.75.75h-2a.75.75 0 0 1-.75-.75z"
+)
+
 @Composable
 fun TextSelectionToolbar(
     language: AppLanguage,
@@ -391,6 +397,7 @@ fun TextSelectionToolbar(
     underline: Boolean,
     strike: Boolean,
     code: Boolean,
+    formatPainterActive: Boolean,
     styleMenuExpanded: Boolean,
     onDismissStyleMenu: () -> Unit,
     styleMenu: @Composable ColumnScope.() -> Unit,
@@ -425,6 +432,7 @@ fun TextSelectionToolbar(
     onStrike: () -> Unit,
     onUnderline: () -> Unit,
     onHighlight: () -> Unit,
+    onFormatPainter: () -> Unit,
     onLinkedDoc: () -> Unit,
     onComment: () -> Unit,
     onMore: () -> Unit
@@ -476,6 +484,9 @@ fun TextSelectionToolbar(
             content = highlightMenu
         )
         TextToolbarSeparator()
+        TextToolbarIconButton(tr(language, "格式刷（行内样式）", "Format painter (inline styles)"), selected = formatPainterActive, onClick = onFormatPainter) { tint ->
+            SvgPathIcon(FormatPainterIcon, tint)
+        }
         TextToolbarAnchoredMenu(
             expanded = linkedMenuExpanded,
             onDismissRequest = onDismissLinkedMenu,

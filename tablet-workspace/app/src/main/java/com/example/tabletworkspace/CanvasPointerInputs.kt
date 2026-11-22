@@ -168,6 +168,11 @@ internal fun Modifier.canvasGestureInput(
                     val areaHits = mutableSetOf<CanvasSelection>()
                     while (true) {
                         val event = awaitPointerEvent()
+                        if (state.viewportGestureActive.value) {
+                            active = null; previous = null; didErase = false
+                            areaHits.clear(); points = emptyList()
+                            continue
+                        }
                         if (active == null) {
                             val down = event.changes.firstOrNull { change ->
                                 val kind = when (change.type) { PointerType.Stylus -> "stylus"; PointerType.Eraser -> "eraser"; PointerType.Touch -> "touch"; PointerType.Mouse -> "mouse"; else -> "unknown" }
@@ -213,7 +218,8 @@ internal fun Modifier.canvasGestureInput(
             } else if (tool == "移动") detectTransformGestures { centroid, delta, zoom, _ ->
                 val oldScale = scale; val next = CanvasZoom.clamp(scale * zoom); val factor = next / oldScale
                 pan = centroid - (centroid - pan) * factor + delta; scale = next
-            } else if (tool == "选择") detectDragGestures(onDragStart = { start ->
+            } else if (tool == "选择") detectDragGestures(onDragStart = dragStart@{ start ->
+                if (state.viewportGestureActive.value) return@dragStart
                 beginGesture(); val p = world(start); val chosen = selection
                 val line = chosen?.takeIf { it.type == "connector" }?.let { page.connectors.getOrNull(it.index)?.let { _ -> page.resolvedConnector(it.index) } }
                 endpointDrag = line?.let { if (hypot(it.x1-p.x,it.y1-p.y)<32f/scale) true else if (hypot(it.x2-p.x,it.y2-p.y)<32f/scale) false else null }
@@ -274,7 +280,8 @@ internal fun Modifier.canvasGestureInput(
                 dragSnapOthers = if (snapStart != null || resizeAnchor != null) page.snapTargetBounds(snapTargets) else emptyList()
                 dragSnapAccum = Point(0f, 0f)
                 snapGuides = emptyList()
-            }, onDragEnd = {
+            }, onDragEnd = dragEnd@{
+                if (state.viewportGestureActive.value) return@dragEnd
                 val a=boxStart; val b=boxEnd
                 val end=endpointDrag; val preview=endpointPreview; val chosen=selection
                 if (dragging && snapToGrid && resizeAnchor == null && endpointDrag == null && boxStart == null) page.snapSelectionsToGrid(selectedItems, settings.gridStep)
@@ -301,8 +308,9 @@ internal fun Modifier.canvasGestureInput(
                 else if (dragging) changed()
                 boxStart=null; boxEnd=null; endpointDrag=null; endpointPreview=null; endpointSnap=null; resizeAnchor=null; resizeSnapshot=null; resizeGrabOffset=Point(0f,0f); resizeAxis=null; dragging = false
                 snapGuides = emptyList(); dragSnapStart = null; dragSnapOthers = emptyList(); dragSnapAccum = Point(0f, 0f)
-            }, onDragCancel = { cancelGesture(); boxStart=null; boxEnd=null; endpointDrag=null; endpointPreview=null; endpointSnap=null; resizeAnchor=null; resizeSnapshot=null; resizeGrabOffset=Point(0f,0f); resizeAxis=null; dragging=false; snapGuides = emptyList(); dragSnapStart = null; dragSnapOthers = emptyList() }) { event, delta ->
+            }, onDragCancel = { cancelGesture(); boxStart=null; boxEnd=null; endpointDrag=null; endpointPreview=null; endpointSnap=null; resizeAnchor=null; resizeSnapshot=null; resizeGrabOffset=Point(0f,0f); resizeAxis=null; dragging=false; snapGuides = emptyList(); dragSnapStart = null; dragSnapOthers = emptyList() }) drag@{ event, delta ->
                 event.consume()
+                if (state.viewportGestureActive.value) return@drag
                 if (endpointDrag != null) {
                     val chosen = selection
                     val line = chosen?.takeIf { it.type == "connector" }?.let { page.connectors.getOrNull(it.index) }
@@ -372,6 +380,10 @@ internal fun Modifier.canvasGestureInput(
                     var moved = false
                     while (true) {
                         val event = awaitPointerEvent()
+                        if (state.viewportGestureActive.value) {
+                            active = null; moved = false; connectorDraft = null
+                            continue
+                        }
                         if (active == null) {
                             val down = event.changes.firstOrNull { it.pressed && !it.previousPressed } ?: continue
                             val p = world(down.position)
@@ -455,7 +467,8 @@ internal fun Modifier.canvasGestureInput(
                         }
                     }
                 } } finally { connectorDraft = null }
-            } else detectDragGestures(onDragStart = { points = listOf(world(it)) }, onDragEnd = {
+            } else detectDragGestures(onDragStart = dragStart@{ if (!state.viewportGestureActive.value) points = listOf(world(it)) }, onDragEnd = dragEnd@{
+                if (state.viewportGestureActive.value) return@dragEnd
                 if (points.isNotEmpty()) { val a = points.first(); val b = points.last(); when (tool) {
                     "矩形", "圆角矩形", "圆形", "三角形", "菱形" -> page.addShape(
                         when (tool) { "圆形" -> "ellipse"; "圆角矩形" -> "roundRect"; "三角形" -> "triangle"; "菱形" -> "diamond"; else -> "rect" },
@@ -514,6 +527,6 @@ internal fun Modifier.canvasGestureInput(
                         chooseTool("选择")
                     }
                 }; changed() }; points = emptyList()
-            }, onDragCancel = { points = emptyList() }) { event, _ -> event.consume(); points = points + world(event.position) }
+            }, onDragCancel = { points = emptyList() }) drag@{ event, _ -> event.consume(); if (!state.viewportGestureActive.value) points = points + world(event.position) }
     }
 }

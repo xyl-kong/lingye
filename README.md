@@ -8,9 +8,9 @@
   <img src="tablet-workspace/docs/images/readme-settings.png" width="32%" alt="设置弹窗">
 </p>
 
-> 当前为 **0.15 开发版**，页面格式 **25**。开发版不应作为唯一资料存储，升级/卸载前请先导出备份。
+> 当前为 **0.15.1 开发版**，页面格式 **25**。开发版不应作为唯一资料存储，升级/卸载前请先导出备份。
 >
-> **下载**：[最新 Release](https://github.com/xyl-kong/lingye/releases/latest) · [直接下载 batch38 APK](https://github.com/xyl-kong/lingye/releases/download/v0.15-batch38/lingye-v0.15-architecture-batch38-release-20261107.apk)
+> **下载**：[仓库内 0.15.1 APK](tablet-workspace/releases/lingye-v0.15.1-local-tools-release-20261122.apk) · [更新与验证记录](tablet-workspace/docs/affine-audit/RELEASE_0.15.1_20261122.md)
 
 ## 项目状态
 
@@ -21,8 +21,8 @@
 | 页面格式 | 25（含多文件夹、Tags、收藏、连线端点/文字、emoji 图标、图形字体与字符级格式） |
 | 数据存储 | 应用私有目录 + `AtomicFile`；页面写入走单线程队列 |
 | 备份格式 | `lingye-backup-2`（可选 `metadata.dat`，兼容 `lingye-backup-1`） |
-| 测试 | 434 项 JVM 单元测试，0 失败 |
-| 发布 | R8 + Release APK，已在 Android 15 平板模拟器冒烟 |
+| 测试 | 469 项 JVM 单元测试，0 失败；AndroidTest 已编译但未运行 |
+| 安装包 | R8 + Release 构建；使用开发测试签名，本版设备操作未验证 |
 
 ## 功能概览
 
@@ -94,11 +94,11 @@
 ├── docs/                         # 早期设计规格与路线图
 ├── tablet-workspace/             # Android 应用
 │   ├── app/src/main/             # Kotlin 源码与资源
-│   ├── app/src/test/             # JVM 单元测试（434 项）
+│   ├── app/src/test/             # JVM 单元测试（469 项）
 │   ├── docs/design/              # 视觉升级、白板/卡片设计草案
 │   ├── docs/affine-audit/        # 架构、数据安全、UI 迭代、问题导览
 │   ├── docs/edgeless-audit/      # 白板对象与交互审计
-│   ├── releases/                 # 当前 Release APK
+│   ├── releases/                 # 安装包与历史版本
 │   ├── README.md                 # 功能细节与构建说明（主文档）
 │   ├── build.gradle.kts
 │   └── settings.gradle.kts
@@ -107,10 +107,10 @@
 
 ## 安装
 
-1. 打开 [Releases](https://github.com/xyl-kong/lingye/releases/latest) 页面，下载最新的 `lingye-v0.15-...-release-*.apk`（当前为 [v0.15-batch38](https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch38)）。
+1. 从[仓库中的 0.15.1 APK](tablet-workspace/releases/lingye-v0.15.1-local-tools-release-20261122.apk) 下载安装包。
 2. 在平板的“设置 → 应用 → 特殊应用权限 → 安装未知应用”中，允许浏览器或文件管理器安装 APK。
 3. 打开下载的 APK 完成安装。首次启动会创建本地工作区，不需要账号或网络。
-4. 可选校验：`SHA-256` 应与 Release 说明一致。当前版本为 `17093EAA4BD66A21C9567614B407F1D6F3A700CF8063A2C3FFA2C497B79A2F47`。
+4. 可选校验：当前版本的 `SHA-256` 为 `897184C2B47D23560C2FCFE47D86845A66B1D5A49AB0A6B188E1B045E1CBA1AC`。
 
 > 开发版可能与旧版本数据不兼容：升级前请先在“设置 → 储存/备份”导出备份；不要把它作为唯一资料存储。
 
@@ -134,15 +134,15 @@ gradle.bat -p "<英文副本>" testDebugUnitTest assembleRelease
 
 Release 启用 R8（`app/proguard-rules.pro`）。调试签名可用项目根目录的 `debug.keystore` 生成；不要把 `local.properties`、签名文件或本机备份提交到仓库。
 
-## 当前发布
+## 当前安装包
 
-- Release 页面：https://github.com/xyl-kong/lingye/releases/tag/v0.15-batch38
-- 文件：`tablet-workspace/releases/lingye-v0.15-architecture-batch38-release-20261107.apk`
-- 直接下载：https://github.com/xyl-kong/lingye/releases/download/v0.15-batch38/lingye-v0.15-architecture-batch38-release-20261107.apk
-- 大小：3,440,443 字节
-- SHA-256：`17093EAA4BD66A21C9567614B407F1D6F3A700CF8063A2C3FFA2C497B79A2F47`
+- 文件：[灵页 0.15.1 APK](tablet-workspace/releases/lingye-v0.15.1-local-tools-release-20261122.apk)
+- 大小：3,491,267 字节
+- SHA-256：`897184C2B47D23560C2FCFE47D86845A66B1D5A49AB0A6B188E1B045E1CBA1AC`
+- 包名 `com.example.tabletworkspace`，版本码 16；与上一安装包同一开发测试签名，可升级安装。该安装包尚未创建单独的 GitHub Release。
+- 新增双指画布导航、文本选区格式刷，并包含本地先前四个提交的设置、导出与界面修正。详见[更新与验证记录](tablet-workspace/docs/affine-audit/RELEASE_0.15.1_20261122.md)。
 
-历史版本的哈希保留在审计文档中；仓库只保留最新 APK。
+历史版本的哈希保留在审计文档中；仓库也保留上一版安装包。
 
 ## 文档索引
 
