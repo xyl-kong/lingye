@@ -15,10 +15,10 @@
 
 - 英文路径源码副本与原项目相关源码 SHA-256 一致；`testDebugUnitTest assembleDebug assembleDebugAndroidTest` 构建成功。
 - JVM 测试 465 项，失败 0、错误 0、跳过 0。新增测试覆盖双指启动条件、平移、中心缩放与缩放上限。
-- Compose 双指触控测试已编译成 AndroidTest APK，**未运行**。
-- 验证用 AVD `Lingye_Validation`：关闭硬件加速的软件启动以 Windows 异常码 `-1073741819` 退出；开启硬件加速时模拟器报告当前 x86_64 环境缺少可用加速。因此本次没有模拟器触控验收，真实触控、笔掌并用和性能均为 **UNVERIFIED**。
+- 2026-11-22 补验：在主机环境启动同一 AVD 后运行 `CanvasTwoFingerInputTest.pinchInPenModeNavigatesAndReleasesLock`，通过；同一 AndroidTest APK 的 4 项 Compose 测试全部通过。沙箱内的加速检查失败仅说明沙箱进程无法访问 WHPX；主机检查为 `WHPX(10.0.26200) is installed and usable`，冷启动约 24 秒，`sys.boot_completed=1`。详见 `EMULATOR_VALIDATION_20261122.md`。
+- 模拟器手动验证画笔“仅手写笔”开启时模拟手指不会落笔，关闭后可以落笔，撤销/重做生效。真实手写笔、笔掌并用、各工具的完整双指手势矩阵和性能仍为 **UNVERIFIED**。
 - 预览 APK：`releases/lingye-v0.15-gesture-preview-unverified-20261113.apk`，SHA-256 `51D701DC5FA8C15387589184D2A6D5DE10ABEE782602FF3105F26CB10AB4004E`。未向用户设备或模拟器安装。
 
 ## 后续验收
 
-在可启动的平板或模拟器上，分别用画笔、橡皮、选择、连线及形状工具测试单指编辑 → 第二指加入 → 双指平移缩放 → 逐指抬起；检查页面对象未意外提交、撤销栈与保存重开一致，再测试手写笔按下时手掌触摸不触发画布导航。
+在平板上，分别用画笔、橡皮、选择、连线及形状工具测试单指编辑 → 第二指加入 → 双指平移缩放 → 逐指抬起；检查页面对象未意外提交、撤销栈与保存重开一致，再测试手写笔按下时手掌触摸不触发画布导航。

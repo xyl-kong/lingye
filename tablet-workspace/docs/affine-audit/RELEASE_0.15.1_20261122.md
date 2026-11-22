@@ -17,9 +17,9 @@
 ## 构建和验证
 
 - 在英文路径的同源构建副本执行 `:app:testDebugUnitTest :app:assembleRelease :app:assembleDebugAndroidTest --offline --no-daemon`，**BUILD SUCCESSFUL**。R8 与 release lint 完成。
-- 86 份 JVM 测试报告共 469 项，失败 0、错误 0、跳过 0。AndroidTest APK 已编译，未在设备运行。
+- 86 份 JVM 测试报告共 469 项，失败 0、错误 0、跳过 0。2026-11-22 在 Android 15 AVD 上补跑 AndroidTest，4 项 Compose 测试全部通过。
 - 构建时 Gradle 转换缓存两次出现 `metadata.bin` 读取错误；删除构建副本内损坏的转换缓存后重新构建成功。未改动项目源码或用户数据。
-- 当前 AVD 缺少可用的 x86_64 硬件加速，软件模式启动异常退出。因此本版双指触控、格式刷选区悬浮定位、升级安装及实际视觉表现仍为 **UNVERIFIED**；构建与 JVM 测试通过不等于设备验收。
+- 模拟器问题已定位为受限沙箱进程无法访问主机 WHPX。主机环境加速检查通过，AVD 冷启动约 24 秒。本版已完成保留数据升级安装、文档/白板/设置页面加载、画笔输入与撤销重做、同文本框格式刷与保存重开的模拟器实测；完整双指工具矩阵、真实手写笔、跨文本框格式刷及更多页面/窗口尺寸仍未验证。证据见 `EMULATOR_VALIDATION_20261122.md`。
 
 ## 已知范围
 

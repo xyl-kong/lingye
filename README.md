@@ -21,8 +21,8 @@
 | 页面格式 | 25（含多文件夹、Tags、收藏、连线端点/文字、emoji 图标、图形字体与字符级格式） |
 | 数据存储 | 应用私有目录 + `AtomicFile`；页面写入走单线程队列 |
 | 备份格式 | `lingye-backup-2`（可选 `metadata.dat`，兼容 `lingye-backup-1`） |
-| 测试 | 469 项 JVM 单元测试，0 失败；AndroidTest 已编译但未运行 |
-| 安装包 | R8 + Release 构建；使用开发测试签名，本版设备操作未验证 |
+| 测试 | 469 项 JVM 单元测试，0 失败；Android 15 模拟器上 4 项 Debug AndroidTest 通过 |
+| 安装包 | R8 + Release 构建；使用开发测试签名，模拟器关键路径已补验，真实平板仍未验证 |
 
 ## 功能概览
 
