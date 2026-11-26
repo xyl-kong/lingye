@@ -38,6 +38,14 @@ data class LocalDatabase(
  }
  fun renameField(id:String,name:String):LocalDatabase { require(name.isNotBlank() && name.trim().length<=100 && fields.any { it.id==id }); return copy(fields=fields.map { if(it.id==id) it.copy(name=name.trim()) else it }) }
  fun moveRow(id:String,status:String):LocalDatabase { require(status.length<=1000 && rows.any { it.id==id }); return copy(rows=rows.map { if(it.id==id) it.copy(status=status) else it }) }
+ fun addRowOnDate(fieldId:String,date:java.time.LocalDate,title:String):LocalDatabase {
+  require(fields.any { it.id==fieldId && it.type=="date" } && title.length<=1000 && rows.size<10000)
+  return copy(rows=rows+DatabaseRow(UUID.randomUUID().toString(),title,"待办",mapOf(fieldId to date.toString())))
+ }
+ fun moveRowDate(rowId:String,fieldId:String,date:java.time.LocalDate):LocalDatabase {
+  require(fields.any { it.id==fieldId && it.type=="date" } && rows.any { it.id==rowId })
+  return copy(rows=rows.map { if(it.id==rowId) it.copy(values=it.values+(fieldId to date.toString())) else it })
+ }
  fun removeField(id:String)=copy(fields=fields.filterNot { it.id==id },rows=rows.map { it.copy(values=it.values-id) })
  fun moveField(id:String,offset:Int):LocalDatabase {
   val from=fields.indexOfFirst { it.id==id }; if(from<0) return this

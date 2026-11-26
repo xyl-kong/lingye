@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -83,6 +85,7 @@ private enum class AllDocsSort { UPDATED, TITLE }
 
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun AllDocumentsHome(
     pages: List<Page>,
     modifiedTimes: Map<String, Long>,
@@ -270,15 +273,13 @@ fun AllDocumentsHome(
             }
         }
                 if (!selectionMode && compactHeader) {
-                    Row(
+                    FlowRow(
                         Modifier.fillMaxWidth().padding(top = 10.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         viewModeToggle()
-                        Spacer(Modifier.width(8.dp))
                         sortAction()
-                        Spacer(Modifier.width(8.dp))
                         createAction()
                     }
                 }
@@ -833,6 +834,8 @@ private fun DocumentRowContent(
     selected: Boolean,
     onToggleFavorite: (Page) -> Unit
 ) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+    val compact = maxWidth < 500.dp
     Row(
         Modifier.fillMaxWidth().heightIn(min = 62.dp).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -856,12 +859,14 @@ private fun DocumentRowContent(
             if (model.preview.isNotBlank()) {
                 Text(model.preview, fontSize = 12.sp, color = LingyeColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            if (compact) Text(formatModified(model.modifiedTime, language), fontSize = 11.sp, color = LingyeColors.Muted)
         }
-        Text(formatModified(model.modifiedTime, language), fontSize = 11.sp, color = LingyeColors.Muted)
+        if (!compact) Text(formatModified(model.modifiedTime, language), fontSize = 11.sp, color = LingyeColors.Muted)
         if (!selectionMode) {
             Spacer(Modifier.width(12.dp))
             FavoriteAction(model.favorite, language) { onToggleFavorite(page) }
         }
+    }
     }
 }
 

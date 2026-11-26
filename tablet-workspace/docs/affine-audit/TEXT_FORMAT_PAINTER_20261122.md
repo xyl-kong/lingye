@@ -16,5 +16,6 @@
 - 英文路径源码副本执行 `testDebugUnitTest assembleDebug` 成功；469 项 JVM 测试，0 失败、0 错误、0 跳过。新增格式刷测试包含页面编码/解码后的样式保持。源码关键文件与副本 SHA-256 一致。
 - 调试预览包：`releases/lingye-v0.15-format-painter-preview-unverified-20261122.apk`，SHA-256 `85434187529E06AF133D97E7191CFAFFBC100FB94C2CA6E3CDBB3ADE9E2766FD`。未安装到设备。
 - 2026-11-22 补验：Release 0.15.1 在 Android 15 AVD 上创建文本框、长按选中 `ABCDEF`、设为粗体、点击格式刷，再选择同框中的另一段文字，出现“已应用格式”提示且目标文字变粗；撤销恢复目标原样，重做再次变粗。强停并重新安装同签名 Release 后，测试页和文字仍在页面文件中。截图与步骤见 `EMULATOR_VALIDATION_20261122.md`。
-- 跨文本框、再次点击取消、混合样式源、复杂颜色与语义保留、横竖屏/分屏、真机触控仍需专项检查，故整体保持 **PARTIAL**。
+- 2026-11-26 补验：Android 15 AVD 中在第一个文本框取样粗体，进入第二个文本框并选中 `TARGET`，浮动格式栏的粗体态随目标选区激活。截图见 `evidence/workflow-format-painter-crossbox-20261126.png`；操作过程及本轮构建见 `ADAPTIVE_DATABASE_WORKFLOW_20261126.md`。
+- 再次点击取消、混合样式源、复杂颜色与语义保留、横竖屏/分屏、真机触控仍需专项检查，故整体保持 **PARTIAL**。
 - 混合样式源选区目前按起始字符取样；多段样式逐段复制及局部字号需要后续独立的数据模型设计与迁移验证。

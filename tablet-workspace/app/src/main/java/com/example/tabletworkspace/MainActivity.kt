@@ -1492,7 +1492,7 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
       Row(Modifier.fillMaxSize()) {
         AnimatedVisibility(visible = sidebarVisible, enter = fadeIn(tween(220)) + slideInHorizontally(tween(260)) { -it }, exit = fadeOut(tween(160)) + slideOutHorizontally(tween(200)) { -it }) {
           Surface(Modifier.width(250.dp).fillMaxHeight(), shape = RoundedCornerShape(0.dp), color = LingyeColors.Sidebar, shadowElevation = 0.dp, border = BorderStroke(1.dp, LingyeColors.Line)) {
-          Column(Modifier.fillMaxSize().padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 8.dp)) {
+          Column(Modifier.fillMaxSize().statusBarsPadding().padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(40.dp).clip(RoundedCornerShape(13.dp))) {
                     Image(painterResource(R.drawable.ic_launcher_background), contentDescription = null, modifier = Modifier.fillMaxSize())
@@ -1987,8 +1987,9 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
             }
             val editorHeaderVisible = !canvasFocusMode && !allDocsHome && !settingsPage && !overview && current != null
             if (editorHeaderVisible) {
+                val extraCompactHeader = LocalConfiguration.current.screenWidthDp < 500
                 Row(
-                    Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 14.dp),
+                    Modifier.fillMaxWidth().statusBarsPadding().height(62.dp).padding(horizontal = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (!sidebarVisible) {
@@ -2027,20 +2028,20 @@ fun Workspace(store: PageStore, registerStopSave: (() -> Unit) -> Unit) {
                     Text(
                         current.title.ifBlank { text("未命名页面", "Untitled") },
                         Modifier.weight(1f),
-                        fontSize = 17.sp,
+                        fontSize = if (extraCompactHeader) 14.sp else 17.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = LingyeColors.Ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    CompactIconAction(
+                    if (!extraCompactHeader) CompactIconAction(
                         if (current.favorite) AppIcon.FAVORITED else AppIcon.FAVORITE,
                         text("收藏页面", "Favorite page"),
                         { togglePageFavorite(current) },
                         if (current.favorite) LingyeColors.Primary else LingyeColors.Muted,
                         selected = current.favorite
                     )
-                    if (workspaceSettings.displayDocInfo) {
+                    if (!extraCompactHeader && workspaceSettings.displayDocInfo) {
                         CompactIconAction(AppIcon.INFO, text("查看信息", "View info"), {
                             pageInfoTarget = current.id
                         })

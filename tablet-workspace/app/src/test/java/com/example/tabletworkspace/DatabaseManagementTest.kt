@@ -1,6 +1,7 @@
 package com.example.tabletworkspace
 import org.junit.Assert.*
 import org.junit.Test
+import java.time.LocalDate
 class DatabaseManagementTest {
  @Test fun sortingNumericFieldsIsNumericStableAndDoesNotChangeRecords() {
   val db=LocalDatabase("x",listOf(DatabaseRow("a","A","",mapOf("n" to "10")),DatabaseRow("b","B","",mapOf("n" to "2")),DatabaseRow("c","C","",emptyMap())),listOf(DatabaseField("n","Number","number")))
@@ -33,5 +34,23 @@ class DatabaseManagementTest {
  @Test fun multilineFieldsRoundTripAndAllowLineBreaks() {
   val db=LocalDatabase("x",listOf(DatabaseRow("1","a","待办",mapOf("notes" to "一\n二"))),listOf(DatabaseField("notes","备注","multiline")))
   assertEquals(db,DatabaseCodec.decode(DatabaseCodec.encode(db)))
+ }
+ @Test fun calendarCreationAndDateMoveKeepRowIdentityAndOtherFields() {
+  val date = DatabaseField("date", "日期", "date")
+  val note = DatabaseField("note", "备注")
+  val db = LocalDatabase("Tasks", emptyList(), listOf(date, note))
+  val created = db.addRowOnDate("date", LocalDate.of(2026, 11, 25), "Release")
+  val row = created.rows.single().copy(values = created.rows.single().values + ("note" to "keep"))
+  val moved = created.copy(rows = listOf(row)).moveRowDate(row.id, "date", LocalDate.of(2026, 12, 1))
+  assertEquals(row.id, moved.rows.single().id)
+  assertEquals("keep", moved.rows.single().values["note"])
+  assertEquals("2026-12-01", moved.rows.single().values["date"])
+  assertEquals(moved, DatabaseCodec.decode(DatabaseCodec.encode(moved)))
+  assertEquals(listOf(row.id), moved.calendar("date", java.time.YearMonth.of(2026, 12))[LocalDate.of(2026, 12, 1)]?.map { it.id })
+ }
+ @Test fun calendarRejectsNonDateFieldWithoutChangingRows() {
+  val db = LocalDatabase("Tasks", emptyList(), listOf(DatabaseField("name", "Name")))
+  try { db.addRowOnDate("name", LocalDate.now(), "x"); fail("non-date field accepted") } catch (_: IllegalArgumentException) { }
+  assertTrue(db.rows.isEmpty())
  }
 }

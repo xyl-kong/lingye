@@ -751,9 +751,12 @@ internal fun CanvasEditor(page: Page, store: PageStore, pages: List<Page>, works
             )
         }
         if (settings.showZoomButtons && presentingFrameId == null) {
+            // Keep zoom controls above the bottom tool rail when the canvas is narrow.
+            // A larger system font otherwise makes the percentage overlap tool buttons.
+            val zoomBottom = if (canvasWidthDp < 840.dp) 104.dp else CanvasUiTokens.zoomBottomPadding
             CanvasZoomControls(
                 language, scale,
-                Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = CanvasUiTokens.zoomBottomPadding).zIndex(2f),
+                Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = zoomBottom).zIndex(2f),
                 onZoomIn = { commands.zoomBy(1.25f) },
                 onZoomOut = { commands.zoomBy(0.8f) },
                 onReset = { scale = 1f; pan = Offset.Zero }
