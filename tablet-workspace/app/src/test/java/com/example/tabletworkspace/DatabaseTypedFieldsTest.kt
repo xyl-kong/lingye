@@ -44,4 +44,13 @@ class DatabaseTypedFieldsTest {
   val b=ByteArrayOutputStream(); DataOutputStream(b).use { it.writeInt(2);it.writeUTF("old");it.writeInt(1);it.writeUTF("r");it.writeUTF("row");it.writeUTF("待办");it.writeInt(1);it.writeUTF("f");it.writeUTF("field");it.writeInt(1);it.writeUTF("f");it.writeUTF("value") }
   val db=DatabaseCodec.decode(Base64.getEncoder().encodeToString(b.toByteArray())); assertEquals("text",db.fields[0].type);assertEquals("value",db.rows[0].values["f"])
  }
+ @Test fun versionFourViewSettingsRemainReadableWithoutBoardColumns() {
+  val b=ByteArrayOutputStream(); DataOutputStream(b).use {
+   it.writeInt(4); it.writeUTF("old"); it.writeInt(0); it.writeInt(0)
+   it.writeUTF("board"); it.writeUTF(""); it.writeBoolean(false); it.writeUTF("")
+  }
+  val db=DatabaseCodec.decode(Base64.getEncoder().encodeToString(b.toByteArray()))
+  assertEquals("board",db.viewMode)
+  assertTrue(db.boardColumns.isEmpty())
+ }
 }

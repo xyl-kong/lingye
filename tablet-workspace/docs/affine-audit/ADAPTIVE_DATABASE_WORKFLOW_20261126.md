@@ -6,32 +6,33 @@
 
 | 区域 | 本轮变化 | 状态 |
 | --- | --- | --- |
-| 看板 | 长按卡片拖到状态列；拖动时跟随指针并显示目标提示；提供“移至其他列”菜单，便于不使用拖拽的用户操作。 | 部分完成：分组列仍固定为状态，缺少看板内新建、拖放动画及完整无障碍流程。 |
-| 日历 | 点击日期格新建记录；点击已有记录编辑名称；通过日期选择器改日期；无日期字段时可添加字段。 | 部分完成：没有在日历格间直接拖动记录，未测试所有跨月边界。 |
+| 看板 | 长按卡片拖到状态列；拖动时跟随指针并显示目标提示；提供“移至其他列”菜单；可新建、重命名和删除空的自定义状态列，并在列内新建记录。 | 功能已实现；任意属性分组、完整 TalkBack 流程和横向滚动时拖动仍待验证。 |
+| 日历 | 点击日期格新建记录；点击已有记录编辑名称或日期；长按记录直接拖到可见日期格，含相邻月份。固定六周网格保证月末也有相邻月份目标。 | 功能已实现；复杂多记录同日及 TalkBack 流程仍待验证。 |
 | 数据库表格 | 小于 720dp 时名称和状态字段纵向排列，操作按钮保持可滚动和至少 48dp 高。 | 480dp、200% 字体的组件测试通过；整页多窗口仍待验证。 |
 | 文档/画布窄屏 | 编辑器顶部避开系统状态栏；画布宽度小于 840dp 时，缩放控件移到工具栏上方。 | Android 15 模拟器 600dp 竖屏、200% 字体截图检查通过。 |
 | 全部文档极窄屏 | 头部操作改为按空间换行；小于 500dp 的列表行把修改时间放到标题下方；编辑器极窄头部将收藏和信息收进已有“更多”菜单。 | 360dp、200% 字体的首页与文档编辑器截图检查通过；长标题仍按单行省略。 |
 | 白板格式刷 | 在两个文本框之间手动取样粗体，并在第二个文本框选中文字后观察到粗体选中态。 | 部分完成：混合样式源、取消、跨窗口及所有格式组合未验证。 |
 
-实现主要位于 `DatabaseInteractiveViews.kt`、`DatabaseTableRow.kt`、`LocalDatabase.kt`、`BlocksEditor.kt`、`AllDocumentsHome.kt`、`MainActivity.kt` 和 `CanvasEditor.kt`。数据库的既有编解码格式、文档内容样式与画布渲染模块未改。
+实现主要位于 `DatabaseInteractiveViews.kt`、`DatabaseTableRow.kt`、`LocalDatabase.kt`、`BlocksEditor.kt`、`AllDocumentsHome.kt`、`MainActivity.kt` 和 `CanvasEditor.kt`。数据库编解码格式从 v4 增至 v5，以持久化自定义看板列；v1–v4 仍可解码。文档内容样式与画布渲染模块未改。
 
 ## 验证记录
 
-- 英文路径构建副本与上述七个主源码文件的 SHA-256 逐一相同；避免中文路径的既有 Gradle 路径问题。
-- `:app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease --offline --no-daemon`：`BUILD SUCCESSFUL`；471 项 JVM 测试，0 失败、0 错误。
-- Android 15 `Lingye_Validation` 模拟器：完整 instrumentation 套件 `OK (8 tests)`。其中本轮四项覆盖看板菜单跨列、看板长按拖拽、日历创建和修改标题、480dp 且 200% 字体下的表格按钮可见性。
+- 英文路径构建副本与本轮改动的五个源码/测试文件 SHA-256 逐一相同；避免中文路径的既有 Gradle 路径问题。
+- `:app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease --offline --no-daemon`：`BUILD SUCCESSFUL`；474 项 JVM 测试，0 失败、0 错误。覆盖 v4 数据向 v5 解码、自定义列的持久化和重命名后记录身份不变。
+- Android 15 `Lingye_Validation` 模拟器：完整 instrumentation 套件 `OK (12 tests)`。覆盖看板菜单/长按跨列、自定义列和列内新建、拖出目标取消、日历创建/编辑/跨月拖动、月末为周日时相邻月份目标可见，以及 480dp、200% 字体下表格操作可见性。
 - 600dp 竖屏、系统字体 200% 的实际界面截图：[文档编辑器](evidence/adaptive-portrait-editor-200-20261126.png)、[白板工具栏与缩放](evidence/adaptive-portrait-canvas-200-20261126.png)。修复前状态栏遮挡编辑器顶部，缩放文字压到画布工具栏；修复后两处不再重叠。
 - 360dp、系统字体 200% 的实际界面截图：[全部文档](evidence/adaptive-360-home-200-20261126.png)、[文档编辑器](evidence/adaptive-360-editor-200-20261126.png)。头部操作可换行，列表标题不再被日期挤成两三个字符；编辑器将低频动作放进既有“更多”菜单。
 - TalkBack 服务在 AVD 中可启用且应用能启动；ADB 手势未能可靠驱动屏幕阅读器焦点，因此不据此声称 TalkBack 端到端通过。测试后已恢复原设置。
 - 格式刷跨文本框操作截图：[第二个文本框选中文字](evidence/workflow-format-painter-crossbox-20261126.png)。源文字设置为粗体并取样，目标文字选区出现粗体激活态；这是人工操作证据，不代替所有样式的自动测试。
-- Release APK 使用 `adb install -r` 安装成功，并能在模拟器启动。包内版本号仍为 0.15.1，本轮未更改安装包版本。预览包：[lingye-v0.15.1-adaptive-database-preview-20261126.apk](../../releases/lingye-v0.15.1-adaptive-database-preview-20261126.apk)，SHA-256 `68C464C9109743668388159184F4F823ED4BCFE573096F9648E0037B6C1B61BC`。
+- Android 15 真正的双应用分屏（左右各约 640dp）已检查：[全部文档](evidence/adaptive-real-split-home-20261126.png)、[文档编辑器](evidence/adaptive-real-split-document-20261126.png)、[白板](evidence/adaptive-real-split-canvas-20261126.png)。应用在右侧窗口可打开文档并切换白板，顶部导航、编辑区、底部画布工具栏和缩放控件均可见。此项仅证明截图所示窗口组合；没有覆盖所有弹窗、旋转与动态拖拽分隔线。
+- 新 Release APK 使用 `adb install -r` 安装成功，并能在模拟器启动。包内版本号仍为 0.15.1，本轮未更改安装包版本。预览包：[lingye-v0.15.1-board-calendar-preview-20261126.apk](../../releases/lingye-v0.15.1-board-calendar-preview-20261126.apk)，SHA-256 `C5744FB739154B1C6004B4EBD53040EAA885E4352BE25D0C46C67020E4D9D975`。
 
 ## 仍待验证或完善
 
-1. 360dp 首页/编辑器和 600dp 文档/白板已有截图；真实系统分屏、旋转中弹窗位置、系统键盘与所有浮动工具条组合尚未逐项验证。
+1. 360dp 首页/编辑器、600dp 文档/白板及 640dp 真实分屏已有截图；旋转中弹窗位置、系统键盘与所有浮动工具条组合尚未逐项验证。
 2. TalkBack 全流程与所有通用控件的 48dp 命中范围未完成审计；本轮只为新增数据库操作提供语义描述和较大的按钮。
-3. 看板自定义分组、看板内新建卡片、取消拖拽/拖放动画及横向滚动时拖动的边界需要后续专项验收。
-4. 日历直接拖动记录改日期、跨月拖动，以及日期选择器的设备测试仍缺失；本轮日期更改使用对话框。
+3. 看板自定义状态列、列内新建、拖出目标取消已实现并有定向测试；任意属性分组、横向滚动时拖动和完整 TalkBack 流程需要后续专项验收。
+4. 日历直接拖动及跨月拖动已实现并有定向测试；复杂多记录同日、日期选择器的设备手动测试和完整 TalkBack 流程仍缺失。
 5. 格式刷混合样式源、跨窗口与取消路径仍未专项测试。
 
 `FEATURE_MATRIX.csv` 中 `UI-011`、`DB-003`、`DB-005`、`DB-013`、`DB-014` 和 `CV-048` 保留 `PARTIAL`，以免将局部测试误写成完整验收。

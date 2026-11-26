@@ -53,4 +53,24 @@ class DatabaseManagementTest {
   try { db.addRowOnDate("name", LocalDate.now(), "x"); fail("non-date field accepted") } catch (_: IllegalArgumentException) { }
   assertTrue(db.rows.isEmpty())
  }
+ @Test fun customBoardColumnsPersistAndRenameMovesRecordsWithoutChangingIds() {
+  val initial = LocalDatabase("Tasks", emptyList()).addBoardColumn("Review")
+  val withRow = initial.addRowInColumn("Review", "Inspect")
+  val rowId = withRow.rows.single().id
+  val renamed = withRow.renameBoardColumn("Review", "Approved")
+  assertEquals(listOf("Approved"), renamed.boardColumns)
+  assertEquals(rowId, renamed.rows.single().id)
+  assertEquals("Approved", renamed.rows.single().status)
+  assertEquals(renamed, DatabaseCodec.decode(DatabaseCodec.encode(renamed)))
+  try { renamed.removeBoardColumn("Approved"); fail("nonempty column removed") } catch (_: IllegalArgumentException) { }
+  val cleared = renamed.moveRow(rowId, "待办").removeBoardColumn("Approved")
+  assertTrue(cleared.boardColumns.isEmpty())
+  assertEquals("待办", cleared.rows.single().status)
+ }
+ @Test fun boardColumnsRejectDuplicateAndInvalidNames() {
+  val db = LocalDatabase("Tasks", emptyList()).addBoardColumn("Review")
+  for (name in listOf("review", " ", "待办")) {
+   try { db.addBoardColumn(name); fail("invalid column accepted: $name") } catch (_: IllegalArgumentException) { }
+  }
+ }
 }
